@@ -1,12 +1,33 @@
-# StripeFit backend: handoff
+# StripeFit: handoff
 
 **Branch:** `backend-complete-1` · **Date:** 10 October 2026
 
-Read `CLAUDE.md` (project rules) and `PLAN.md` (phased spec) first. This file says where the backend stands and what's left.
+Read `CLAUDE.md` (project rules) and `PLAN.md` (phased spec) first. This file says where the app stands and what's left.
 
 ## Status in one paragraph
 
-All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks, and a daily outfit planned from Google Calendar, the weather and your laundry, sent as a notification the night before (backend and frontend; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
+All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks, and a daily outfit planned from Google Calendar, the weather and your laundry, sent as a notification the night before. All of it has a frontend. **Stripe is now configured and verified in test mode.** Checkout pages are created, and a real signed webhook from Stripe was verified and handled. **AI still runs in mock mode**, because the key provided isn't an OpenRouter key. Google (Gmail and Calendar) is not configured yet. Test status: smoke test 67 of 68 (the one failure only expects Stripe to have no keys), new features 37 of 37, calendar, night-before and laundry 46 of 46, outfit scenarios 28 of 28, email extraction 15 of 15. The frontend type-checks and builds.
+
+## What needs fixing (priority order)
+
+| # | Problem | Why it matters | How to fix | Who |
+|---|---|---|---|---|
+| 1 | **The AI key is not an OpenRouter key.** `OPENROUTER_API_KEY` in `backend/.env` is 35 characters starting with `sk-`, which is DeepSeek's format. OpenRouter rejects it with 401. `USE_MOCK_AI` was set back to `true` so the app stays usable | No real photo labels, outfit picks or email extraction. Everything runs on mocks and rules | Create a key at https://openrouter.ai/keys (it starts `sk-or-v1-`) and add credit. Put it in `.env`, set `USE_MOCK_AI=false`, and restart the API. Then run `python scripts/check_models.py`, `check_outfits.py` and `check_extraction.py` from `backend/` and tune the prompts until they pass. The chosen models (`deepseek/deepseek-v4.1-flash`, `~deepseek/deepseek-pro-latest`, `openrouter/free`) all exist on OpenRouter. The vision model `openrouter/free` has no fallback, so add one, for example `deepseek/deepseek-v4-flash-vision-exp` or a Claude or Gemini model | Human: key. Dev: checks and tuning |
+| 2 | **The DeepSeek key was pasted into a chat** | It's exposed | Rotate it in the DeepSeek dashboard if it's real | Human |
+| 3 | **A Pro purchase hasn't been completed in the browser yet** | It's the payment flow judges will try | Make sure the webhook listener is running (`python scripts/stripe_listen.py`, which keeps `STRIPE_WEBHOOK_SECRET` in sync), go to **Pro → Buy**, pay with card `4242 4242 4242 4242`, and check that Pro switches on. Optionally resend the event and confirm no second Purchase appears | Human, 2 minutes |
+| 4 | **Google isn't configured,** so Gmail import and Google Calendar don't work | The day planner falls back to casual days. Use the demo calendar on the AI log page meanwhile | Follow sections 3 and 3b below: Google Cloud project, Gmail API and Calendar API enabled, OAuth consent screen with test users, both scopes, both redirect URIs, then `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` | Human |
+| 5 | **Push notifications haven't been checked on a real screen** | A headless browser can't click "Allow" | On the Today tab, turn on "Night before", allow notifications, then click "Send a test now". Use Chrome or Edge at `http://localhost:5173` | Human, 1 minute |
+| 6 | **One test needs updating.** The smoke-test check "checkout without keys" now fails because keys exist | It's a test assumption, not an app bug | Clear the Stripe settings in that test before asserting `stripe_not_configured` (the test scripts are outside the repo; see "Verified") | Dev |
+| 7 | **`VAPID_SUBJECT` is a placeholder** (`mailto:stripefit-demo@example.com`) | Push services may reject it in production | Set it to a real team email in `.env` before deploying | Dev |
+| 8 | **This branch isn't merged.** `backend-complete-1` already includes `main` (the Stripe-style redesign) | Teammates on `main` won't see any of this | Open a PR at https://github.com/Asav23/StripeFit/compare/main...backend-complete-1 | Team |
+
+**Known rough edges** (minor; fix if there's time):
+- In mock mode, picks can be odd, for example a satin going-out top for a casual day. The real stylist gets the style guide and should do better. Check with `check_outfits.py` once AI is live.
+- The keyword parser misses a place after a lowercase "the", as in "Debs at the Shelbourne". The AI parser handles it once AI is live.
+- With a small wardrobe, "Another option" can repeat the shirt and trousers when they're the only suitable ones. That's by design: an outfit beats perfect variety.
+- `PUT /api/daily/settings` replaces every field, and the frontend sends every field. Keep it that way.
+- The demo weather, the demo calendar and the mock overrides reset when the API restarts.
+- On Windows, if the API runs without a console window (for example from a background job), `--reload` hangs. Run it from a normal terminal, or restart it by hand.
 
 ## Frontend for the new features (built; start here to test)
 
@@ -41,7 +62,7 @@ The frontend is built on top of the Stripe-style redesign that was merged from `
 5. Upload a few real clothing photos and one non-clothing photo. Tune `LABEL_SYSTEM` in `app/ai/prompts.py` if the labels are poor.
 6. Open the AI log page (pulse icon). Tokens and cost should be filled in. Cost parsing was checked against a simulated OpenRouter response, but not a live one.
 
-### 2. Stripe Pro purchase (needs Stripe test keys)
+### 2. Stripe Pro purchase (keys added and verified; finish the purchase test)
 1. In the Stripe dashboard, switch to **Test mode**. In `backend/.env`, set `STRIPE_SECRET_KEY=sk_test_...` and `STRIPE_PUBLISHABLE_KEY=pk_test_...`.
 2. Run `python scripts/stripe_setup.py`. It creates the product and the €2.99 price, and writes `STRIPE_PRICE_ID` into `.env`.
 3. Run `python scripts/stripe_listen.py` and leave it running. It writes `STRIPE_WEBHOOK_SECRET` into `.env` and forwards webhooks to the API. It needs the Stripe CLI: `winget install Stripe.StripeCli` on Windows, `brew install stripe/stripe-cli/stripe` on Mac.
