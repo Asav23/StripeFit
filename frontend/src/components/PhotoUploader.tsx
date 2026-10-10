@@ -89,21 +89,21 @@ export default function PhotoUploader() {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`grid gap-3 rounded-lg border border-dashed p-3 transition sm:grid-cols-2 ${dragging ? "border-ink bg-sunk" : "border-line-strong"}`}
+        className={`grid gap-3 rounded-lg border border-dashed p-3 transition sm:grid-cols-2 ${dragging ? "border-accent bg-accent-soft" : "border-line-strong"}`}
       >
         <button
           onClick={() => cameraInput.current?.click()}
-          className="flex items-center gap-4 rounded-md bg-ink p-5 text-left text-paper transition hover:bg-ink-2 sm:flex-col sm:items-start sm:p-6"
+          className="surface-night flex items-center gap-4 rounded-lg p-5 text-left shadow-[var(--shadow-raised)] transition hover:brightness-110 sm:flex-col sm:items-start sm:p-6"
         >
           <Camera className="h-6 w-6" strokeWidth={1.5} />
           <span>
             <span className="block text-[15px] font-medium">Take a photo</span>
-            <span className="block text-[13px] text-paper/60">Use your phone's camera</span>
+            <span className="block text-[13px] text-white/65">Use your phone's camera</span>
           </span>
         </button>
         <button
           onClick={() => galleryInput.current?.click()}
-          className="flex items-center gap-4 rounded-md border border-line-strong bg-card p-5 text-left transition hover:border-ink sm:flex-col sm:items-start sm:p-6"
+          className="flex items-center gap-4 rounded-lg border border-line-strong bg-card p-5 text-left shadow-[var(--shadow-xs)] transition hover:border-accent/50 hover:shadow-[var(--shadow-card)] sm:flex-col sm:items-start sm:p-6"
         >
           <ImagePlus className="h-6 w-6" strokeWidth={1.5} />
           <span>
@@ -132,15 +132,15 @@ export default function PhotoUploader() {
       ))}
 
       <ul className="grid gap-x-8 gap-y-1 text-[13px] text-ink-2 sm:grid-cols-3">
-        <li><span className="font-mono text-muted">01</span> One item per photo</li>
-        <li><span className="font-mono text-muted">02</span> Lay it flat or hang it up</li>
-        <li><span className="font-mono text-muted">03</span> Good light, plain background</li>
+        <li><span className="font-mono text-accent">01</span> One item per photo</li>
+        <li><span className="font-mono text-accent">02</span> Lay it flat or hang it up</li>
+        <li><span className="font-mono text-accent">03</span> Good light, plain background</li>
       </ul>
 
       {blocked && <UpgradeBanner message={blocked} />}
 
       {uploads.length > 0 && (
-        <ul className="divide-y divide-line rounded-lg border border-line bg-card" aria-live="polite">
+        <ul className="divide-y divide-line rounded-xl border border-line bg-card shadow-[var(--shadow-card)]" aria-live="polite">
           {uploads.map((u) => (
             <li key={u.key} className="flex items-center gap-3 px-3 py-2.5">
               <img src={u.preview} alt="" className="h-12 w-12 rounded-sm object-cover" />

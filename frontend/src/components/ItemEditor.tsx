@@ -93,7 +93,7 @@ export default function ItemEditor({
           <div
             role="radiogroup"
             aria-label="Waterproof"
-            className={`grid grid-cols-3 overflow-hidden rounded-md border ${needs("waterproof") ? "border-warn ring-2 ring-warn/20" : "border-line-strong"}`}
+            className={`grid grid-cols-3 overflow-hidden rounded-md border bg-card shadow-[var(--shadow-xs)] ${needs("waterproof") ? "border-warn ring-2 ring-warn/20" : "border-line-strong"}`}
           >
             {[
               { v: true, l: "Yes" },
@@ -107,7 +107,7 @@ export default function ItemEditor({
                 aria-checked={(draft.waterproof ?? null) === v}
                 onClick={() => onChange({ waterproof: v })}
                 className={`h-9 border-l border-line text-[13px] first:border-l-0 ${
-                  (draft.waterproof ?? null) === v ? "bg-ink text-paper" : "bg-card text-ink-2 hover:bg-sunk"
+                  (draft.waterproof ?? null) === v ? "bg-accent text-white" : "bg-card text-ink-2 hover:bg-sunk"
                 }`}
               >
                 {l}

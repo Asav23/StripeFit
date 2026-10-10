@@ -122,12 +122,12 @@ export default function GmailImporter() {
             </p>
           </Notice>
         ) : !status.connected ? (
-          <div className="flex flex-col items-start gap-4 rounded-lg border border-line bg-card p-6">
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-sunk">
+          <div className="flex flex-col items-start gap-4 rounded-xl border border-line bg-card p-6 shadow-[var(--shadow-card)]">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-accent-soft text-accent">
               <Mail className="h-5 w-5" strokeWidth={1.5} />
             </span>
             <div>
-              <h3 className="display text-[28px]">Let your inbox fill your wardrobe</h3>
+              <h3 className="display text-[20px]">Let your inbox fill your wardrobe</h3>
               <p className="mt-1 text-sm text-ink-2">Connect once; import whenever you've bought something new.</p>
             </div>
             <Button onClick={connect} loading={busy}>
@@ -135,7 +135,7 @@ export default function GmailImporter() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-4 rounded-lg border border-line bg-card p-5">
+          <div className="space-y-4 rounded-xl border border-line bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-medium">
                 <span className="h-2 w-2 rounded-full bg-ok" /> Gmail connected (read-only)
@@ -176,7 +176,7 @@ export default function GmailImporter() {
           </>
         )}
       </div>
-      <aside className="h-fit rounded-lg border border-line p-4">
+      <aside className="h-fit rounded-xl border border-line bg-card/70 p-4">
         <p className="mb-3 text-[13px] font-medium">What StripeFit reads</p>
         {promises}
       </aside>

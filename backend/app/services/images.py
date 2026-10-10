@@ -118,8 +118,8 @@ COLOUR_RGB: dict[str, tuple[int, int, int]] = {
     "teal": (40, 128, 128),
 }
 _FALLBACK_RGB = (180, 186, 196)
-_BACKGROUND = (236, 231, 223)  # matches the app's --color-sunk
-_SHADOW = (222, 215, 204)
+_BACKGROUND = (238, 242, 247)  # matches the app's --color-sunk
+_SHADOW = (224, 230, 238)
 
 _SHAPES: dict[str, list[tuple[float, float]]] = {
     "top": [(.30, .18), (.42, .14), (.46, .19), (.54, .19), (.58, .14), (.70, .18), (.84, .32), (.76, .40),

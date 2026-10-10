@@ -138,7 +138,7 @@ export default function WardrobePage() {
           ))}
 
         {(wornCount > 0 || washCount > 0) && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-card px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 shadow-[var(--shadow-card)]">
             <WashingMachine className="h-5 w-5 text-info" strokeWidth={1.75} />
             <p className="flex-1 text-sm text-ink-2">
               {wornCount > 0 && `${wornCount} worn`}
@@ -261,7 +261,7 @@ export default function WardrobePage() {
 
       {selecting && (
         <Portal>
-        <div className="fixed inset-x-0 bottom-[68px] z-30 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-[232px]">
+        <div className="fixed inset-x-0 bottom-[68px] z-30 border-t border-line bg-card/95 px-4 py-3 shadow-[0_-4px_16px_rgb(10_37_64/0.06)] backdrop-blur md:bottom-0 md:left-[232px]">
           <div className="mx-auto flex max-w-5xl items-center gap-3 md:px-6">
             <p className="flex-1 text-sm text-ink-2">
               {selected.size ? `${selected.size} selected` : "Tap items to select them"}

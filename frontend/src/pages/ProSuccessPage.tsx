@@ -63,8 +63,8 @@ export default function ProSuccessPage() {
         <div className="animate-rise space-y-8">
           <div className="text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-ok" strokeWidth={1.5} />
-            <p className="kicker mt-4">Payment confirmed</p>
-            <h1 className="display mt-1 text-[48px]">Pro is yours</h1>
+            <p className="eyebrow mt-4">Payment confirmed</p>
+            <h1 className="display mt-1 text-[34px]">Pro is yours</h1>
             <p className="mt-2 text-ink-2">Unlimited items and order import are unlocked.</p>
           </div>
           <section>

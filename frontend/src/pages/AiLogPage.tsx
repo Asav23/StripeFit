@@ -52,7 +52,7 @@ export default function AiLogPage() {
               ].map(([label, value]) => (
                 <div key={label} className="py-3 sm:px-4 sm:first:pl-0">
                   <dt className="kicker">{label}</dt>
-                  <dd className="display mt-1 text-[30px] leading-none">{value}</dd>
+                  <dd className="display mt-1 font-mono text-[24px] leading-none">{value}</dd>
                 </div>
               ))}
             </dl>

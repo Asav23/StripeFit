@@ -42,7 +42,7 @@ export default function DemoControls({ mockAi }: { mockAi: boolean }) {
   };
 
   return (
-    <section className="space-y-4 rounded-lg border border-line bg-card p-4">
+    <section className="space-y-4 rounded-xl border border-line bg-card p-4 shadow-[var(--shadow-card)]">
       <div>
         <p className="mb-2 text-[13px] font-medium">Weather used by the outfit planner</p>
         <div className="flex flex-wrap gap-1.5">
@@ -55,7 +55,7 @@ export default function DemoControls({ mockAi }: { mockAi: boolean }) {
       </div>
       {mockAi && (
         <label className="flex cursor-pointer items-start gap-2.5 border-t border-line pt-4 text-[13px] text-ink-2">
-          <input type="checkbox" checked={invalidPick} onChange={toggleInvalidPick} className="mt-0.5 h-4 w-4 accent-[var(--color-ink)]" />
+          <input type="checkbox" checked={invalidPick} onChange={toggleInvalidPick} className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]" />
           <span>
             <span className="font-medium text-ink">Make the AI stylist misbehave.</span> It returns item IDs you don't own, so you can see
             validation reject them and the rule-based fallback take over.

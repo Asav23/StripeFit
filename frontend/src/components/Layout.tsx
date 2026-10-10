@@ -13,7 +13,7 @@ const TABS: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`display text-[26px] leading-none ${className}`}>
+    <span className={`font-serif text-[27px] leading-none tracking-[-0.01em] text-ink ${className}`}>
       Stripe<em className="text-accent">fit</em>
     </span>
   );
@@ -22,7 +22,7 @@ export function Wordmark({ className = "" }: { className?: string }) {
 function PlanBadge() {
   const { me } = useMe();
   if (!me) return null;
-  if (me.premium) return <span className="tag border-ink bg-ink text-paper">Pro</span>;
+  if (me.premium) return <span className="tag surface-night px-2 font-semibold text-white">Pro</span>;
   const used = me.confirmed_item_count;
   const limit = me.item_limit ?? 0;
   return (
@@ -30,8 +30,8 @@ function PlanBadge() {
       <span className="font-mono text-[11px] text-ink-2">
         {used}/{limit}
       </span>
-      <span className="h-1 w-10 overflow-hidden rounded-full bg-line">
-        <span className={`block h-full ${used >= limit ? "bg-accent" : "bg-ink"}`} style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} />
+      <span className="h-1.5 w-10 overflow-hidden rounded-full bg-line">
+        <span className={`block h-full rounded-full ${used >= limit ? "bg-danger" : "bg-accent"}`} style={{ width: `${Math.min(100, (used / limit) * 100)}%` }} />
       </span>
     </Link>
   );
@@ -41,7 +41,7 @@ function ReviewCount({ className = "" }: { className?: string }) {
   const { me } = useMe();
   if (!me?.pending_count) return null;
   return (
-    <span className={`min-w-[18px] rounded-full bg-accent px-1 text-center font-mono text-[10px] leading-[18px] text-white ${className}`}>
+    <span className={`min-w-[18px] rounded-full bg-accent px-1 text-center font-mono text-[10px] font-medium leading-[18px] text-white shadow-[var(--shadow-xs)] ${className}`}>
       {me.pending_count}
     </span>
   );
@@ -54,7 +54,7 @@ export default function Layout() {
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[232px_1fr]">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-4 py-6 md:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line bg-card px-4 py-6 md:flex">
         <Link to="/" className="mb-10 px-2">
           <Wordmark />
         </Link>
@@ -65,8 +65,8 @@ export default function Layout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex h-10 items-center gap-3 rounded-md px-2.5 text-sm transition ${
-                  isActive ? "bg-card font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-line)]" : "text-ink-2 hover:bg-sunk hover:text-ink"
+                `flex h-9 items-center gap-3 rounded-md px-2.5 text-[14px] transition-colors duration-150 ${
+                  isActive ? "bg-accent-soft font-medium text-accent" : "text-ink-2 hover:bg-sunk hover:text-ink"
                 }`
               }
             >
@@ -78,7 +78,7 @@ export default function Layout() {
         </nav>
         <div className="mt-auto space-y-4 px-2">
           <div className="flex items-center justify-between">
-            <span className="kicker">Plan</span>
+            <span className="kicker">Your plan</span>
             <PlanBadge />
           </div>
           <NavLink
@@ -92,9 +92,10 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="min-w-0">
+      <div className="relative min-w-0">
+        <div aria-hidden className="page-wash pointer-events-none absolute inset-x-0 top-0 h-80" />
         {/* Mobile header */}
-        <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur md:hidden">
+        <header className="sticky top-0 z-30 border-b border-line bg-card/90 backdrop-blur md:hidden">
           <div className="flex h-14 items-center justify-between px-4">
             <Link to="/">
               <Wordmark className="text-[24px]" />
@@ -108,7 +109,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main key={location.pathname} className="mx-auto w-full max-w-5xl animate-rise px-4 pb-32 pt-6 md:px-10 md:pb-16 md:pt-12">
+        <main key={location.pathname} className="relative mx-auto w-full max-w-5xl animate-rise px-4 pb-32 pt-6 md:px-10 md:pb-16 md:pt-12">
           {error && (
             <Notice tone="error" className="mb-6">
               <strong className="font-medium">Can't reach the StripeFit server.</strong> Retrying automatically. Check the backend
@@ -122,7 +123,7 @@ export default function Layout() {
       {/* Mobile tab bar */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         <div className="grid grid-cols-5">
           {TABS.map(({ to, label, icon: Icon, end }) => (
@@ -131,12 +132,12 @@ export default function Layout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `relative flex flex-col items-center gap-1 pb-2 pt-2.5 text-[10.5px] tracking-wide ${isActive ? "text-ink" : "text-muted"}`
+                `relative flex flex-col items-center gap-1 pb-2 pt-2.5 text-[10.5px] font-medium ${isActive ? "text-accent" : "text-muted"}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`absolute inset-x-6 top-0 h-[2px] rounded-full ${isActive ? "bg-ink" : ""}`} />
+                  <span className={`absolute inset-x-6 top-0 h-[2px] rounded-full ${isActive ? "bg-accent" : ""}`} />
                   <Icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2 : 1.6} />
                   {label}
                   {label === "Review" && <ReviewCount className="absolute right-[22%] top-1" />}

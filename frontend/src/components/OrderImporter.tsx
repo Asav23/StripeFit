@@ -51,7 +51,7 @@ export default function OrderImporter() {
           onClick={() => input.current?.click()}
           disabled={working}
           className={`flex w-full flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-10 text-center transition ${
-            dragging ? "border-ink bg-sunk" : "border-line-strong hover:border-ink"
+            dragging ? "border-accent bg-accent-soft" : "border-line-strong bg-card/60 hover:border-accent/60"
           }`}
         >
           {working ? <Spinner className="h-6 w-6" /> : <FileText className="h-6 w-6 text-ink-2" strokeWidth={1.5} />}
@@ -87,7 +87,7 @@ export default function OrderImporter() {
         {summary && <IngestResults summary={summary} />}
       </div>
 
-      <aside className="h-fit rounded-lg border border-line p-4 text-[13px] leading-relaxed text-ink-2">
+      <aside className="h-fit rounded-xl border border-line bg-card/70 p-4 text-[13px] leading-relaxed text-ink-2">
         <p className="mb-2 flex items-center gap-2 font-medium text-ink">
           <ShieldCheck className="h-4 w-4 text-ok" /> What happens to your email
         </p>

@@ -11,12 +11,15 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "accent";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-ink text-paper hover:bg-ink-2 active:bg-black disabled:bg-line-strong disabled:text-card",
-  accent: "bg-accent text-white hover:brightness-110 active:brightness-95 disabled:opacity-50",
+  primary:
+    "bg-accent text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-raised)] hover:bg-accent-2 active:translate-y-px active:shadow-[var(--shadow-xs)] disabled:bg-line-strong disabled:shadow-none",
+  accent:
+    "bg-ink text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.12),var(--shadow-raised)] hover:bg-[#13325a] active:translate-y-px disabled:opacity-50",
   secondary:
-    "bg-card text-ink border border-line-strong hover:border-ink active:bg-sunk disabled:text-muted disabled:border-line",
+    "bg-card text-ink border border-line-strong shadow-[var(--shadow-xs)] hover:border-[#b5c0cc] hover:bg-[#fbfcfe] active:bg-sunk disabled:text-muted disabled:border-line disabled:shadow-none",
   ghost: "text-ink-2 hover:bg-sunk hover:text-ink active:bg-line disabled:text-muted",
-  danger: "bg-card text-danger border border-line-strong hover:border-danger hover:bg-danger-soft disabled:opacity-50",
+  danger:
+    "bg-card text-danger border border-line-strong shadow-[var(--shadow-xs)] hover:border-danger/50 hover:bg-danger-soft disabled:opacity-50",
 };
 const SIZES: Record<Size, string> = {
   sm: "h-8 px-3 text-[13px] gap-1.5",
@@ -35,7 +38,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }) {
   return (
     <button
-      className={`inline-flex select-none items-center justify-center rounded-md font-medium transition-[background,border,color,filter] duration-150 disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      className={`inline-flex select-none items-center justify-center rounded-md font-medium transition-[background,border,color,box-shadow,transform] duration-150 disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...rest}
@@ -94,9 +97,9 @@ export function PageHeader({
   return (
     <header className="mb-6 flex items-end justify-between gap-4 md:mb-8">
       <div className="min-w-0">
-        {kicker && <p className="kicker mb-2">{kicker}</p>}
-        <h1 className="display text-[40px] md:text-[52px]">{title}</h1>
-        {description && <p className="mt-2 max-w-prose text-[15px] text-ink-2">{description}</p>}
+        {kicker && <p className="eyebrow mb-2">{kicker}</p>}
+        <h1 className="display text-[30px] md:text-[38px]">{title}</h1>
+        {description && <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-ink-2">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </header>
@@ -106,7 +109,7 @@ export function PageHeader({
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
-      <h2 className="kicker text-ink-2">{children}</h2>
+      <h2 className="text-[13px] font-semibold text-ink">{children}</h2>
       {action}
     </div>
   );
@@ -135,12 +138,12 @@ export function Tabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(o.value)}
             className={`relative shrink-0 pb-2.5 pt-1 text-sm transition ${
-              active ? "font-medium text-ink" : "text-muted hover:text-ink-2"
+              active ? "font-medium text-accent" : "text-muted hover:text-ink"
             }`}
           >
             {o.label}
-            {o.count !== undefined && <span className="ml-1.5 font-mono text-[11px] text-muted">{o.count}</span>}
-            <span className={`absolute inset-x-0 -bottom-px h-[2px] rounded-full transition ${active ? "bg-ink" : "bg-transparent"}`} />
+            {o.count !== undefined && <span className="ml-1.5 font-mono text-[11px] opacity-60">{o.count}</span>}
+            <span className={`absolute inset-x-0 -bottom-px h-[2px] rounded-full transition ${active ? "bg-accent" : "bg-transparent"}`} />
           </button>
         );
       })}
@@ -165,8 +168,10 @@ export function Choice({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`h-8 rounded-md border px-3 text-[13px] transition ${
-        active ? "border-ink bg-ink text-paper" : "border-line-strong bg-card text-ink-2 hover:border-ink hover:text-ink"
+      className={`h-8 rounded-md border px-3 text-[13px] transition-[background,border,color,box-shadow] duration-150 ${
+        active
+          ? "border-accent bg-accent-soft font-medium text-accent shadow-[0_0_0_1px_var(--color-accent)_inset]"
+          : "border-line-strong bg-card text-ink-2 shadow-[var(--shadow-xs)] hover:border-[#b5c0cc] hover:text-ink"
       } ${className}`}
     >
       {children}
@@ -222,7 +227,7 @@ const TONES: Record<Tone, { box: string; icon: LucideIcon; iconClass: string }> 
 export function Notice({ tone = "info", children, className = "" }: { tone?: Tone; children: ReactNode; className?: string }) {
   const { box, icon: Icon, iconClass } = TONES[tone];
   return (
-    <div className={`flex gap-2.5 rounded-md border px-3 py-2.5 text-sm leading-snug ${box} ${className}`} role={tone === "error" ? "alert" : undefined}>
+    <div className={`flex gap-2.5 rounded-md border px-3.5 py-3 text-sm leading-snug ${box} ${className}`} role={tone === "error" ? "alert" : undefined}>
       <Icon className={`mt-px h-4 w-4 shrink-0 ${iconClass}`} strokeWidth={2} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -241,11 +246,11 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-dashed border-line-strong px-6 py-14 text-center">
-      <span className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-sunk text-ink-2">
+    <div className="flex flex-col items-center rounded-lg border border-dashed border-line-strong bg-card/60 px-6 py-14 text-center">
+      <span className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-accent">
         <Icon className="h-5 w-5" strokeWidth={1.75} />
       </span>
-      <h3 className="display text-[26px]">{title}</h3>
+      <h3 className="display text-[19px]">{title}</h3>
       {body && <p className="mt-1.5 max-w-xs text-sm text-ink-2">{body}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -254,13 +259,13 @@ export function EmptyState({
 
 export function UpgradeBanner({ message }: { message: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-ink px-4 py-3.5 text-paper">
+    <div className="surface-night flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg px-4 py-3.5 shadow-[var(--shadow-card)]">
       <Lock className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-medium">{message}</p>
-        <p className="text-paper/60">StripeFit Pro is €2.99, once. No subscription.</p>
+        <p className="text-white/65">StripeFit Pro is €2.99, once. No subscription.</p>
       </div>
-      <Link to="/pro" className="inline-flex h-8 items-center rounded-md bg-paper px-3 text-[13px] font-medium text-ink hover:bg-white">
+      <Link to="/pro" className="inline-flex h-8 items-center rounded-md bg-white px-3 text-[13px] font-medium text-ink shadow-[var(--shadow-xs)] transition hover:bg-accent-soft">
         See Pro
       </Link>
     </div>
@@ -299,7 +304,7 @@ export function ScalePicker({
       <div
         role="radiogroup"
         aria-label={name}
-        className={`grid grid-cols-5 overflow-hidden rounded-md border ${highlight ? "border-warn ring-2 ring-warn/20" : "border-line-strong"}`}
+        className={`grid grid-cols-5 overflow-hidden rounded-md border bg-card shadow-[var(--shadow-xs)] ${highlight ? "border-warn ring-2 ring-warn/20" : "border-line-strong"}`}
       >
         {[1, 2, 3, 4, 5].map((n) => (
           <button
@@ -310,7 +315,7 @@ export function ScalePicker({
             title={labels[n]}
             onClick={() => onChange(value === n ? null : n)}
             className={`h-9 border-l border-line font-mono text-[13px] transition first:border-l-0 ${
-              value === n ? "bg-ink text-paper" : value !== null && n < value ? "bg-sunk text-ink-2" : "bg-card text-ink-2 hover:bg-sunk"
+              value === n ? "bg-accent text-white" : value !== null && n < value ? "bg-accent-soft text-accent" : "bg-card text-ink-2 hover:bg-sunk"
             }`}
           >
             {n}
@@ -339,7 +344,7 @@ export function Field({ label, hint, children, htmlFor }: { label: string; hint?
 export const inputClass = "field";
 
 export function NeedsInput() {
-  return <span className="font-mono text-[10.5px] uppercase tracking-wide text-warn">Please fill in</span>;
+  return <span className="text-[11.5px] font-medium text-warn">Please fill in</span>;
 }
 
 // ---------------------------------------------------------------- dialog
@@ -368,14 +373,14 @@ export function Sheet({ open, onClose, children, title }: { open: boolean; onClo
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="absolute inset-0 animate-fade bg-ink/40" onClick={onClose} />
+      <div className="absolute inset-0 animate-fade bg-ink/35 backdrop-blur-[2px]" onClick={onClose} />
       <div
         ref={panel}
         tabIndex={-1}
-        className="relative max-h-[92dvh] w-full max-w-lg animate-sheet overflow-y-auto rounded-t-xl bg-paper shadow-[0_-8px_40px_rgb(0_0_0/0.18)] outline-none md:rounded-xl"
+        className="relative max-h-[92dvh] w-full max-w-lg animate-sheet overflow-y-auto rounded-t-xl bg-card shadow-[var(--shadow-overlay)] outline-none md:rounded-xl"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-paper/95 px-5 py-3 backdrop-blur">
-          <span className="kicker truncate">{title}</span>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-card/95 px-5 py-3 backdrop-blur">
+          <span className="truncate text-[13px] font-semibold">{title}</span>
           <IconButton icon={X} label="Close" onClick={onClose} className="-mr-2" />
         </div>
         <div className="px-5 pb-8 pt-5">{children}</div>
