@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useToast } from "../context";
-import { Chip } from "./ui";
+import { Choice } from "./ui";
 
 const WEATHER_PRESETS: { value: string | null; label: string }[] = [
   { value: null, label: "Real forecast" },
-  { value: "rain", label: "🌧️ Rain 9°C" },
-  { value: "cold", label: "🥶 Cold 2°C" },
-  { value: "hot", label: "☀️ Hot 25°C" },
+  { value: "rain", label: "Rain, 9°C" },
+  { value: "cold", label: "Cold, 2°C" },
+  { value: "hot", label: "Hot, 25°C" },
 ];
 
 /** Switches for showing the rules and fallbacks live, whatever today's weather or AI is doing. */
@@ -42,24 +42,26 @@ export default function DemoControls({ mockAi }: { mockAi: boolean }) {
   };
 
   return (
-    <div className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-      <p className="text-xs font-semibold text-slate-700">Demo controls</p>
+    <section className="space-y-4 rounded-lg border border-line bg-card p-4">
       <div>
-        <p className="mb-1.5 text-xs text-slate-500">Weather used by the outfit planner</p>
+        <p className="mb-2 text-[13px] font-medium">Weather used by the outfit planner</p>
         <div className="flex flex-wrap gap-1.5">
           {WEATHER_PRESETS.map((p) => (
-            <Chip key={p.label} active={weather === p.value} onClick={() => chooseWeather(p.value)} className="text-xs">
+            <Choice key={p.label} active={weather === p.value} onClick={() => chooseWeather(p.value)}>
               {p.label}
-            </Chip>
+            </Choice>
           ))}
         </div>
       </div>
       {mockAi && (
-        <label className="flex items-center gap-2 text-xs text-slate-600">
-          <input type="checkbox" checked={invalidPick} onChange={toggleInvalidPick} className="h-4 w-4 accent-indigo-600" />
-          Make the AI stylist return invalid item IDs (shows validation + rule-based fallback)
+        <label className="flex cursor-pointer items-start gap-2.5 border-t border-line pt-4 text-[13px] text-ink-2">
+          <input type="checkbox" checked={invalidPick} onChange={toggleInvalidPick} className="mt-0.5 h-4 w-4 accent-[var(--color-ink)]" />
+          <span>
+            <span className="font-medium text-ink">Make the AI stylist misbehave.</span> It returns item IDs you don't own, so you can see
+            validation reject them and the rule-based fallback take over.
+          </span>
         </label>
       )}
-    </div>
+    </section>
   );
 }

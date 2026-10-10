@@ -3,7 +3,6 @@
 import io
 import ipaddress
 import socket
-import textwrap
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
@@ -119,7 +118,8 @@ COLOUR_RGB: dict[str, tuple[int, int, int]] = {
     "teal": (40, 128, 128),
 }
 _FALLBACK_RGB = (180, 186, 196)
-_BACKGROUND = (241, 243, 247)
+_BACKGROUND = (236, 231, 223)  # matches the app's --color-sunk
+_SHADOW = (222, 215, 204)
 
 _SHAPES: dict[str, list[tuple[float, float]]] = {
     "top": [(.30, .18), (.42, .14), (.46, .19), (.54, .19), (.58, .14), (.70, .18), (.84, .32), (.76, .40),
@@ -156,7 +156,10 @@ def _rgb(colour: str) -> tuple[int, int, int]:
 
 
 def make_placeholder(name: str, category: str, colours: list[str]) -> tuple[str, str]:
-    """Draw a simple silhouette tile in the item's colour. Returns (image_path, thumb_path)."""
+    """Draw a flat-lay silhouette in the item's colour on paper. Returns (image_path, thumb_path).
+
+    No text: the app always shows the name next to the image. 4:5 to match the item cards.
+    """
     size = 600
     img = Image.new("RGB", (size, size), _BACKGROUND)
     draw = ImageDraw.Draw(img)
@@ -166,27 +169,24 @@ def make_placeholder(name: str, category: str, colours: list[str]) -> tuple[str,
     points = [(x * size, y * size) for x, y in _SHAPES.get(shape_key, _SHAPES["top"])]
     known = [c for c in colours if c != "unknown"]
     fill = _rgb(known[0]) if known else _FALLBACK_RGB
-    outline = tuple(max(0, int(c * 0.6)) for c in fill)
-    draw.polygon(points, fill=fill, outline=outline, width=4)
+    outline = tuple(max(0, int(c * 0.72)) for c in fill)
+    shadow = [(x + 7, y + 9) for x, y in points]
+    draw.polygon(shadow, fill=_SHADOW)
+    draw.polygon(points, fill=fill, outline=outline, width=3)
     if len(known) > 1:  # second colour as a stripe
         draw.rectangle([size * .30, size * .45, size * .70, size * .50], fill=_rgb(known[1]))
     if category == "sportswear":
-        draw.rectangle([size * .30, size * .40, size * .70, size * .43], fill=(255, 255, 255))
+        draw.rectangle([size * .30, size * .40, size * .70, size * .43], fill=(250, 248, 244))
     if category == "outerwear":
-        draw.line([(size * .5, size * .22), (size * .5, size * .80)], fill=outline, width=4)
+        draw.line([(size * .5, size * .22), (size * .5, size * .80)], fill=outline, width=3)
     if not known:
-        draw.text((size * .5, size * .45), "?", fill=(255, 255, 255), font=_font(90), anchor="mm")
+        draw.text((size * .5, size * .45), "?", fill=(250, 248, 244), font=_font(90), anchor="mm")
 
-    lines = textwrap.wrap(name, width=26)[:2]
-    font = _font(30)
-    draw.rounded_rectangle([size * .06, size * .83, size * .94, size * .97], radius=18, fill=(255, 255, 255))
-    for i, line in enumerate(lines):
-        y = size * (.90 if len(lines) == 1 else .865 + i * .065)
-        draw.text((size / 2, y), line, fill=(40, 44, 52), font=font, anchor="mm")
-
+    canvas = Image.new("RGB", (size, int(size * 1.25)), _BACKGROUND)
+    canvas.paste(img, (0, int(size * 0.125) - 12))
     file_name = f"{uuid.uuid4().hex}.png"
-    img.save(UPLOAD_DIR / "placeholders" / file_name)
-    thumb = img.copy()
+    canvas.save(UPLOAD_DIR / "placeholders" / file_name)
+    thumb = canvas.copy()
     thumb.thumbnail((THUMB_PX, THUMB_PX))
     thumb.save(UPLOAD_DIR / "thumbs" / file_name)
     return f"placeholders/{file_name}", f"thumbs/{file_name}"

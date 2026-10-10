@@ -1,8 +1,9 @@
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { Purchase } from "../api/types";
-import { Button, Notice, Spinner } from "../components/ui";
+import { Button, LinkButton, Notice, SectionTitle, Spinner } from "../components/ui";
 import { useMe } from "../context";
 import { PurchaseRecord } from "./ProPage";
 
@@ -51,46 +52,52 @@ export default function ProSuccessPage() {
   }, [check]);
 
   return (
-    <div className="space-y-5 pt-4">
+    <div className="mx-auto max-w-lg pt-6">
       {state === "checking" && (
-        <div className="flex flex-col items-center gap-3 py-12 text-slate-600">
-          <Spinner className="h-8 w-8 text-indigo-600" />
-          <p>Confirming your payment with Stripe…</p>
+        <div className="flex flex-col items-center gap-4 py-20 text-center">
+          <Spinner className="h-7 w-7" />
+          <p className="text-ink-2">Confirming your payment with Stripe…</p>
         </div>
       )}
       {state === "paid" && purchase && (
-        <>
-          <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-center text-white shadow-lg">
-            <p className="text-5xl">🎉</p>
-            <p className="mt-2 text-2xl font-bold">Pro active</p>
-            <p className="text-emerald-50">Unlimited items and order import are unlocked.</p>
+        <div className="animate-rise space-y-8">
+          <div className="text-center">
+            <CheckCircle2 className="mx-auto h-10 w-10 text-ok" strokeWidth={1.5} />
+            <p className="kicker mt-4">Payment confirmed</p>
+            <h1 className="display mt-1 text-[48px]">Pro is yours</h1>
+            <p className="mt-2 text-ink-2">Unlimited items and order import are unlocked.</p>
           </div>
-          <PurchaseRecord purchase={purchase} />
-          <div className="grid grid-cols-2 gap-2">
-            <Link to="/add?tab=order" className="rounded-xl bg-indigo-600 py-2.5 text-center text-sm font-semibold text-white">
-              Import orders
-            </Link>
-            <Link to="/" className="rounded-xl bg-white py-2.5 text-center text-sm font-semibold text-slate-700 ring-1 ring-slate-300">
-              Wardrobe
-            </Link>
+          <section>
+            <SectionTitle>Receipt</SectionTitle>
+            <PurchaseRecord purchase={purchase} />
+          </section>
+          <div className="flex flex-wrap justify-center gap-2">
+            <LinkButton to="/add?tab=order">
+              Import your orders <ArrowRight className="h-4 w-4" />
+            </LinkButton>
+            <LinkButton to="/" variant="secondary">
+              Back to wardrobe
+            </LinkButton>
           </div>
-        </>
+        </div>
       )}
       {state === "pending" && (
         <Notice tone="warn">
-          <p className="font-semibold">Your payment is still processing.</p>
-          <p>This usually takes a few seconds.</p>
-          <Button variant="secondary" className="mt-2" onClick={check}>
+          <p className="font-medium">Your payment is still processing.</p>
+          <p className="text-ink-2">This usually takes a few seconds.</p>
+          <Button variant="secondary" size="sm" className="mt-3" onClick={check}>
             Check again
           </Button>
         </Notice>
       )}
       {state === "error" && (
         <Notice tone="error">
-          <p className="font-semibold">{error}</p>
-          <Link to="/pro" className="mt-1 inline-block font-semibold underline">
-            Back to Pro →
-          </Link>
+          <p className="font-medium">{error}</p>
+          <div className="mt-3">
+            <LinkButton to="/pro" variant="secondary">
+              Back to Pro
+            </LinkButton>
+          </div>
         </Notice>
       )}
     </div>

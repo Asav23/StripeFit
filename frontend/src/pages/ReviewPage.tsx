@@ -1,14 +1,13 @@
+import { Camera, ClipboardCheck, Copy, Plus, UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { ApiError, api } from "../api/client";
 import type { Duplicate, ItemEdit, Owner, ReviewItem } from "../api/types";
-import { CameraIcon } from "../components/Icons";
 import ItemEditor from "../components/ItemEditor";
-import { Button, EmptyState, Notice, Skeleton, UpgradeBanner } from "../components/ui";
+import { Button, Choice, EmptyState, LinkButton, Notice, PageHeader, Skeleton, UpgradeBanner } from "../components/ui";
 import { useMe, useToast } from "../context";
 import { formatMoney } from "../lib/format";
 
-const SOURCE_LABELS: Record<string, string> = { photo: "📷 Photo", email: "✉️ Order email", gmail: "✉️ Gmail", manual: "Manual" };
+const SOURCE_LABELS: Record<string, string> = { photo: "Photo", email: "Order email", gmail: "Gmail", manual: "Manual" };
 
 function missingFields(d: ItemEdit): string[] {
   const missing: string[] = [];
@@ -20,7 +19,7 @@ function missingFields(d: ItemEdit): string[] {
   return missing;
 }
 
-function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: (id: number, message: string) => void }) {
+function ReviewCard({ item, index, onDone }: { item: ReviewItem; index: number; onDone: (id: number, message: string) => void }) {
   const { showError } = useToast();
   const [draft, setDraft] = useState<ItemEdit>({
     name: item.name,
@@ -34,7 +33,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: (id: number, m
     size: item.size,
   });
   const [duplicate, setDuplicate] = useState<Duplicate | null>(item.duplicate);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"confirm" | "merge" | "keep" | "reject" | null>(null);
   const [blocked, setBlocked] = useState<string | null>(null);
   const [image, setImage] = useState(item.thumb_url);
   const [hasPhoto, setHasPhoto] = useState(item.has_real_photo);
@@ -42,7 +41,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: (id: number, m
   const missing = missingFields(draft);
 
   const confirm = async (decision?: "merge" | "keep_both") => {
-    setBusy(true);
+    setBusy(decision === "merge" ? "merge" : decision === "keep_both" ? "keep" : "confirm");
     try {
       const result = await api.confirm(item.id, {
         ...draft,
@@ -54,18 +53,18 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: (id: number, m
       if (e instanceof ApiError && e.code === "possible_duplicate") setDuplicate(e.detail.duplicate as Duplicate);
       else if (e instanceof ApiError && e.code === "upgrade_required") setBlocked(e.message);
       else showError(e);
-      setBusy(false);
+      setBusy(null);
     }
   };
 
   const reject = async () => {
-    setBusy(true);
+    setBusy("reject");
     try {
       await api.reject(item.id);
       onDone(item.id, "Removed from review");
     } catch (e) {
       showError(e);
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -80,117 +79,115 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: (id: number, m
     }
   };
 
-  const setOwner = (owner: Owner) => setDraft((d) => ({ ...d, owner }));
+  const askOwner = item.owner !== "me" && item.prompt;
+  const provenance = [SOURCE_LABELS[item.source] ?? item.source, item.retailer, item.size, item.price != null ? formatMoney(item.price, item.currency) : null].filter(Boolean);
 
   return (
-    <article className="space-y-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <div className="flex gap-3">
-        <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
+    <article className="animate-rise border-t border-line pt-6 md:grid md:grid-cols-[220px_1fr] md:gap-10">
+      <div className="mb-5 flex gap-4 md:mb-0 md:block">
+        <div className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-md bg-sunk md:w-full">
           {image && <img src={image} alt={item.name} className="h-full w-full object-cover" />}
           {!hasPhoto && (
             <button
               onClick={() => photoInput.current?.click()}
-              className="absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 rounded-lg bg-white/95 py-1 text-[11px] font-semibold text-indigo-700"
+              className="absolute inset-x-1.5 bottom-1.5 flex h-7 items-center justify-center gap-1 rounded-sm bg-card/95 text-[11px] font-medium hover:bg-card"
             >
-              <CameraIcon className="h-3.5 w-3.5" /> Add photo
+              <Camera className="h-3.5 w-3.5" /> Add photo
             </button>
           )}
           <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => addPhoto(e.target.files?.[0])} />
         </div>
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="min-w-0 space-y-2 md:mt-4">
+          <p className="font-mono text-[11px] text-muted">No. {String(index + 1).padStart(2, "0")}</p>
           <div className="flex flex-wrap gap-1">
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-              {SOURCE_LABELS[item.source] ?? item.source}
-            </span>
-            {item.retailer && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{item.retailer}</span>
-            )}
-            {item.status === "on_the_way" && (
-              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">On the way</span>
-            )}
-          </div>
-          {item.confidence != null &&
-            (item.low_confidence ? (
-              <p className="text-xs font-semibold text-amber-700">AI wasn't sure about this one. Please double-check the highlighted fields.</p>
-            ) : (
-              <p className="text-xs text-slate-500">AI confidence {Math.round(item.confidence * 100)}%</p>
+            {provenance.map((p) => (
+              <span key={p} className="tag">
+                {p}
+              </span>
             ))}
-          {item.price != null && <p className="text-xs text-slate-500">{formatMoney(item.price, item.currency)}</p>}
-          {item.notes && <p className="text-xs italic text-slate-500">{item.notes}</p>}
+            {item.status === "on_the_way" && <span className="tag border-accent/40 text-accent">On the way</span>}
+          </div>
+          {item.confidence != null && (
+            <p className={`text-xs ${item.low_confidence ? "text-warn" : "text-muted"}`}>
+              {item.low_confidence ? "The AI wasn't sure. Tinted fields are guesses." : `AI confidence ${Math.round(item.confidence * 100)}%`}
+            </p>
+          )}
+          {item.notes && <p className="text-xs italic leading-relaxed text-muted">{item.notes}</p>}
         </div>
       </div>
 
-      {item.owner !== "me" && item.prompt && (
-        <div className="rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-200">
-          <p className="mb-2 text-sm font-semibold text-violet-900">{item.prompt}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {(
-              [
-                ["me", "Yes, it's mine"],
-                ["child", "My child's"],
-                ["other", "Someone else's"],
-              ] as [Owner, string][]
-            ).map(([o, label]) => (
-              <button
-                key={o}
-                onClick={() => setOwner(o)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                  draft.owner === o ? "bg-violet-700 text-white ring-violet-700" : "bg-white text-violet-800 ring-violet-200"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+      <div className="min-w-0 space-y-5">
+        {askOwner && (
+          <div className="rounded-md border border-line bg-card p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-medium">
+              <UserRound className="h-4 w-4 text-accent" /> {item.prompt}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  ["me", "Yes, it's mine"],
+                  ["child", "My child's"],
+                  ["other", "Someone else's"],
+                ] as [Owner, string][]
+              ).map(([o, label]) => (
+                <Choice key={o} active={draft.owner === o} onClick={() => setDraft((d) => ({ ...d, owner: o }))}>
+                  {label}
+                </Choice>
+              ))}
+            </div>
+            {draft.owner !== "me" && <p className="mt-2 text-xs text-muted">It stays in your wardrobe but is never used in your outfits.</p>}
           </div>
-          {draft.owner !== "me" && <p className="mt-2 text-xs text-violet-700">Kept in your wardrobe but never used in your outfits.</p>}
-        </div>
-      )}
+        )}
 
-      {duplicate && (
-        <div className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200">
-          <div className="flex items-center gap-3">
-            {duplicate.item.thumb_url && <img src={duplicate.item.thumb_url} alt="" className="h-14 w-14 rounded-xl object-cover" />}
-            <div className="text-sm">
-              <p className="font-semibold text-amber-900">Looks like your {duplicate.item.name.toLowerCase()}. Same item?</p>
-              <p className="text-xs text-amber-800">{duplicate.reason}</p>
+        {duplicate && (
+          <div className="rounded-md border border-warn/40 bg-warn-soft p-4">
+            <div className="flex items-center gap-3">
+              {duplicate.item.thumb_url && <img src={duplicate.item.thumb_url} alt="" className="h-14 w-12 rounded-sm object-cover" />}
+              <div className="min-w-0 text-sm">
+                <p className="flex items-center gap-1.5 font-medium">
+                  <Copy className="h-3.5 w-3.5 text-warn" /> Looks like your {duplicate.item.name.toLowerCase()}. Same item?
+                </p>
+                <p className="mt-0.5 text-xs text-ink-2">{duplicate.reason}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => confirm("merge")} loading={busy === "merge"} disabled={busy !== null}>
+                Same item, merge
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => confirm("keep_both")} loading={busy === "keep"} disabled={busy !== null}>
+                Different, keep both
+              </Button>
+              <Button size="sm" variant="ghost" onClick={reject} loading={busy === "reject"} disabled={busy !== null}>
+                Discard this one
+              </Button>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button className="py-2" onClick={() => confirm("merge")} loading={busy}>
-              Merge
+        )}
+
+        <ItemEditor
+          draft={draft}
+          onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          missing={missing}
+          uncertain={item.low_confidence}
+          showOwner={item.owner === "me"}
+        />
+
+        {blocked && <UpgradeBanner message={blocked} />}
+
+        {!duplicate && (
+          <div className="flex items-center gap-2 border-t border-line pt-4">
+            <p className="hidden flex-1 text-xs text-muted sm:block">
+              {missing.length ? `${missing.length} field${missing.length > 1 ? "s" : ""} still empty. You can fill them in later.` : "All labels filled in."}
+            </p>
+            <Button variant="ghost" onClick={reject} loading={busy === "reject"} disabled={busy !== null}>
+              Reject
             </Button>
-            <Button variant="secondary" className="py-2" onClick={() => confirm("keep_both")} disabled={busy}>
-              Keep both
+            <Button onClick={() => confirm()} loading={busy === "confirm"} disabled={busy !== null || missing.includes("category")} className="flex-1 sm:flex-none">
+              {missing.includes("category") ? "Pick a category" : "Add to wardrobe"}
             </Button>
           </div>
-        </div>
-      )}
-
-      <ItemEditor
-        draft={draft}
-        onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-        missing={missing}
-        uncertain={item.low_confidence}
-        showOwner={item.owner === "me"}
-      />
-
-      {blocked && <UpgradeBanner message={blocked} />}
-
-      {!duplicate && (
-        <div className="grid grid-cols-3 gap-2">
-          <Button variant="secondary" onClick={reject} disabled={busy}>
-            Reject
-          </Button>
-          <Button className="col-span-2" onClick={() => confirm()} loading={busy} disabled={missing.includes("category")}>
-            {missing.includes("category") ? "Pick a category" : "Confirm"}
-          </Button>
-        </div>
-      )}
-      {duplicate && (
-        <button onClick={reject} className="w-full text-center text-sm text-slate-500 underline" disabled={busy}>
-          Not a duplicate, and I don't want it: reject
-        </button>
-      )}
+        )}
+      </div>
     </article>
   );
 }
@@ -221,25 +218,38 @@ export default function ReviewPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Review</h1>
-        <p className="text-sm text-slate-500">Nothing joins your wardrobe until you confirm it.</p>
-      </div>
+    <div>
+      <PageHeader
+        kicker={items?.length ? `${items.length} waiting` : "Review"}
+        title="Check before it's yours"
+        description="The AI's labels are a first draft. Nothing joins your wardrobe until you confirm it."
+      />
       {failed && <Notice tone="error">Couldn't load the review queue. Check the server is running and refresh.</Notice>}
-      {items === null && !failed && <Skeleton className="h-96" />}
+      {items === null && !failed && (
+        <div className="grid gap-10 border-t border-line pt-6 md:grid-cols-[220px_1fr]">
+          <Skeleton className="aspect-[4/5]" />
+          <div className="space-y-4">
+            <Skeleton className="h-10" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-24" />
+          </div>
+        </div>
+      )}
       {items?.length === 0 && (
         <EmptyState
+          icon={ClipboardCheck}
           title="All caught up"
-          body="New items from photos or order emails will appear here for you to check."
+          body="Items from photos and order emails wait here for you to check."
           action={
-            <Link to="/add" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">
-              Add clothes
-            </Link>
+            <LinkButton to="/add">
+              <Plus className="h-4 w-4" /> Add clothes
+            </LinkButton>
           }
         />
       )}
-      {items?.map((item) => <ReviewCard key={item.id} item={item} onDone={done} />)}
+      <div className="space-y-10">
+        {items?.map((item, i) => <ReviewCard key={item.id} item={item} index={i} onDone={done} />)}
+      </div>
     </div>
   );
 }

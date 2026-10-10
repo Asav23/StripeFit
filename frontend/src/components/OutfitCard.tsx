@@ -1,27 +1,83 @@
+import {
+  Bike,
+  Bus,
+  Car,
+  Cloud,
+  CloudDrizzle,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  Footprints,
+  HelpCircle,
+  Info,
+  RefreshCw,
+  Sun,
+  ThumbsDown,
+  ThumbsUp,
+  TrainFront,
+  Umbrella,
+  Wind,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { Outfit, Slot, Weather } from "../api/types";
 import { useToast } from "../context";
-import { OCCASION_LABELS, SLOT_LABELS, TRAVEL_LABELS, formatDateTime } from "../lib/format";
-import { RefreshIcon } from "./Icons";
-import { Button, Notice } from "./ui";
+import { OCCASION_LABELS, SLOT_LABELS, TIMEZONE } from "../lib/format";
+import { Button, IconButton } from "./ui";
 
-export function WeatherChip({ weather }: { weather: Weather }) {
+const TRAVEL: Record<string, { icon: LucideIcon; label: string }> = {
+  walk: { icon: Footprints, label: "Walking" },
+  cycle: { icon: Bike, label: "Cycling" },
+  bus: { icon: Bus, label: "Bus" },
+  train: { icon: TrainFront, label: "Train / Luas" },
+  car: { icon: Car, label: "Car" },
+  unknown: { icon: HelpCircle, label: "Travel not given" },
+};
+
+export function weatherIcon(code: number | null): LucideIcon {
+  if (code === null) return Cloud;
+  if (code === 0 || code === 1) return Sun;
+  if (code === 2) return CloudSun;
+  if (code === 3) return Cloud;
+  if (code === 45 || code === 48) return CloudFog;
+  if (code >= 51 && code <= 57) return CloudDrizzle;
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return CloudRain;
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return CloudSnow;
+  if (code >= 95) return CloudLightning;
+  return Cloud;
+}
+
+function when(iso: string): string {
+  return new Intl.DateTimeFormat("en-IE", { timeZone: TIMEZONE, weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(
+    new Date(iso),
+  );
+}
+
+export function WeatherBlock({ weather }: { weather: Weather }) {
+  const Icon = weatherIcon(weather.weather_code);
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 p-3 ring-1 ring-sky-100">
-      <span className="text-3xl" aria-hidden>
-        {weather.icon}
-      </span>
-      <div className="flex-1">
-        <p className="text-lg font-bold leading-tight">{Math.round(weather.temperature_c)}°C</p>
-        <p className="text-xs text-slate-600">
-          {weather.description} · {weather.location_name}
-        </p>
+    <div className="flex items-center gap-4">
+      <Icon className="h-9 w-9 text-ink-2" strokeWidth={1.25} />
+      <div>
+        <p className="display text-[40px] leading-none">{Math.round(weather.temperature_c)}°</p>
+        <p className="mt-1 text-xs text-muted">{weather.description}</p>
       </div>
-      <div className="text-right text-xs text-slate-600">
-        <p className={weather.is_wet ? "font-bold text-sky-700" : ""}>☔ {weather.precipitation_probability ?? 0}%</p>
-        {weather.wind_kmh != null && <p>💨 {Math.round(weather.wind_kmh)} km/h</p>}
-      </div>
+      <dl className="space-y-1 border-l border-line pl-4 font-mono text-[11px] text-ink-2">
+        <div className={`flex items-center gap-1.5 ${weather.is_wet ? "text-info" : ""}`}>
+          <Umbrella className="h-3 w-3" /> <dt className="sr-only">Rain chance</dt>
+          <dd>{weather.precipitation_probability ?? 0}%</dd>
+        </div>
+        {weather.wind_kmh != null && (
+          <div className="flex items-center gap-1.5">
+            <Wind className="h-3 w-3" /> <dt className="sr-only">Wind</dt>
+            <dd>{Math.round(weather.wind_kmh)} km/h</dd>
+          </div>
+        )}
+        <div className="truncate text-muted">{weather.location_name}</div>
+      </dl>
     </div>
   );
 }
@@ -43,90 +99,116 @@ export default function OutfitCard({ outfit, onChange }: { outfit: Outfit; onCha
   };
 
   const p = outfit.parsed;
+  const travel = TRAVEL[p.travel_mode] ?? TRAVEL.unknown;
+  const TravelIcon = travel.icon;
+
   return (
-    <section className="space-y-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="rounded-full bg-indigo-600 px-2.5 py-1 font-semibold text-white">{OCCASION_LABELS[p.occasion] ?? p.occasion}</span>
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">{formatDateTime(p.datetime_iso)}</span>
-        {p.destination && <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">📍 {p.destination}</span>}
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">{TRAVEL_LABELS[p.travel_mode] ?? p.travel_mode}</span>
-        {p.dress_code && <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">{p.dress_code}</span>}
-        {outfit.used_fallback && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-800" title="The AI's answer wasn't usable, so rules picked this outfit">
-            Fallback used
-          </span>
+    <article className="animate-rise overflow-hidden rounded-lg border border-line bg-card">
+      {/* Headline: the occasion, when/where, and the weather that shaped the pick */}
+      <header className="flex flex-col gap-5 border-b border-line p-5 md:flex-row md:items-end md:justify-between md:p-7">
+        <div className="min-w-0">
+          <p className="kicker mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>The look</span>
+            {outfit.used_fallback && (
+              <span className="tag border-warn/40 text-warn" title="The AI's answer wasn't usable, so StripeFit's rules picked this outfit">
+                Rule-based pick
+              </span>
+            )}
+          </p>
+          <h2 className="display text-[44px] md:text-[56px]">{OCCASION_LABELS[p.occasion] ?? p.occasion}</h2>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
+            <span>{when(p.datetime_iso)}</span>
+            {p.destination && <span>· {p.destination}</span>}
+            <span className="inline-flex items-center gap-1">
+              · <TravelIcon className="h-3.5 w-3.5" /> {travel.label}
+            </span>
+            {p.dress_code && <span>· {p.dress_code}</span>}
+          </p>
+        </div>
+        {outfit.weather ? (
+          <WeatherBlock weather={outfit.weather} />
+        ) : (
+          <p className="text-[13px] text-muted">No forecast; weather ignored</p>
+        )}
+      </header>
+
+      <div className="space-y-5 p-5 md:p-7">
+        <blockquote className="border-l-2 border-accent pl-4 text-[17px] leading-relaxed text-ink">{outfit.explanation}</blockquote>
+
+        {outfit.notices.length > 0 && (
+          <ul className="space-y-1">
+            {outfit.notices.map((n) => (
+              <li key={n} className="flex items-start gap-2 text-[13px] text-muted">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {n}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {outfit.slots.length > 0 && (
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
+            {outfit.slots.map(({ slot, item }) => (
+              <li key={`${slot}-${item.id}`} className="group">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-sunk">
+                  {item.thumb_url && <img src={item.thumb_url} alt="" className="h-full w-full object-cover" />}
+                  <IconButton
+                    icon={RefreshCw}
+                    label={`Swap ${SLOT_LABELS[slot].toLowerCase()}`}
+                    spinning={busy === `swap-${slot}`}
+                    disabled={busy !== null}
+                    onClick={() => act(`swap-${slot}`, () => api.swap(outfit.id, slot as Slot))}
+                    className="absolute bottom-2 right-2 h-8 w-8 bg-card/95 shadow-sm hover:bg-card"
+                  />
+                </div>
+                <p className="kicker mt-2.5">{SLOT_LABELS[slot]}</p>
+                <p className="mt-0.5 line-clamp-2 text-[14px] font-medium leading-snug">{item.name}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {outfit.gaps.length > 0 && (
+          <section className="rounded-md border border-warn/35 bg-warn-soft px-4 py-3">
+            <h3 className="kicker mb-1.5 text-warn">Missing pieces</h3>
+            <ul className="space-y-1 text-sm text-ink">
+              {outfit.gaps.map((g) => (
+                <li key={g}>{g}</li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
 
-      {outfit.weather && <WeatherChip weather={outfit.weather} />}
-      {outfit.notices.map((n) => (
-        <Notice key={n} tone="info">
-          {n}
-        </Notice>
-      ))}
-
-      <p className="text-[15px] leading-relaxed text-slate-700">{outfit.explanation}</p>
-
-      {outfit.slots.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {outfit.slots.map(({ slot, item }) => (
-            <div key={`${slot}-${item.id}`} className="overflow-hidden rounded-2xl ring-1 ring-slate-200">
-              <div className="relative aspect-square bg-slate-100">
-                {item.thumb_url && <img src={item.thumb_url} alt={item.name} className="h-full w-full object-cover" />}
-                <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                  {SLOT_LABELS[slot]}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-1 p-2">
-                <p className="line-clamp-2 text-xs font-semibold text-slate-800">{item.name}</p>
-                <button
-                  onClick={() => act(`swap-${slot}`, () => api.swap(outfit.id, slot as Slot))}
-                  disabled={busy !== null}
-                  className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-40"
-                  title={`Swap ${SLOT_LABELS[slot].toLowerCase()}`}
-                  aria-label={`Swap ${SLOT_LABELS[slot]}`}
-                >
-                  <RefreshIcon className={`h-4 w-4 ${busy === `swap-${slot}` ? "animate-spin" : ""}`} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {outfit.gaps.length > 0 && (
-        <div className="space-y-1 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
-          <p className="font-semibold">Missing pieces</p>
-          <ul className="list-disc space-y-1 pl-5">
-            {outfit.gaps.map((g) => (
-              <li key={g}>{g}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
+      <footer className="flex items-center gap-2 border-t border-line bg-paper px-5 py-3.5 md:px-7">
         <Button
-          className="flex-1"
-          onClick={() => act("wear", () => api.wear(outfit.id), "Enjoy! Items marked as worn.")}
+          onClick={() => act("wear", () => api.wear(outfit.id), "Have a good one. Those items are now marked as worn.")}
           loading={busy === "wear"}
-          disabled={outfit.worn || outfit.slots.length === 0}
+          disabled={outfit.worn || outfit.slots.length === 0 || busy !== null}
         >
-          {outfit.worn ? "Worn ✓" : "Wear this"}
+          {outfit.worn ? "Worn today" : "Wear this"}
         </Button>
-        {(["up", "down"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => act(`fb-${f}`, () => api.feedback(outfit.id, outfit.feedback === f ? null : f))}
-            className={`rounded-xl px-3 py-2 text-lg ring-1 ${
-              outfit.feedback === f ? "bg-indigo-50 ring-indigo-400" : "bg-white ring-slate-200"
-            }`}
-            aria-label={f === "up" ? "Good outfit" : "Bad outfit"}
-          >
-            {f === "up" ? "👍" : "👎"}
-          </button>
-        ))}
-      </div>
-    </section>
+        <p className="hidden flex-1 text-xs text-muted sm:block">{outfit.worn ? "These items are in your worn pile." : "Marks these items as worn so they rest a while."}</p>
+        <div className="ml-auto flex gap-1" role="group" aria-label="Rate this outfit">
+          {(["up", "down"] as const).map((f) => {
+            const Icon = f === "up" ? ThumbsUp : ThumbsDown;
+            const active = outfit.feedback === f;
+            return (
+              <button
+                key={f}
+                onClick={() => act(`fb-${f}`, () => api.feedback(outfit.id, active ? null : f))}
+                aria-pressed={active}
+                aria-label={f === "up" ? "Good outfit" : "Not for me"}
+                className={`grid h-10 w-10 place-items-center rounded-md border transition ${
+                  active ? "border-ink bg-ink text-paper" : "border-line-strong text-ink-2 hover:border-ink"
+                }`}
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            );
+          })}
+        </div>
+      </footer>
+    </article>
   );
 }

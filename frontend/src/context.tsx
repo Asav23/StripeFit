@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { ApiError, api } from "./api/client";
 import type { Me } from "./api/types";
 
@@ -38,24 +39,34 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [notify],
   );
 
-  const tones: Record<Tone, string> = {
-    success: "bg-emerald-600",
-    error: "bg-rose-600",
-    info: "bg-slate-800",
+  const dismiss = (id: number) => setToasts((t) => t.filter((x) => x.id !== id));
+  const icons: Record<Tone, ReactNode> = {
+    success: <CheckCircle2 className="h-4 w-4 text-[#9fd3b0]" />,
+    error: <XCircle className="h-4 w-4 text-[#f0a49c]" />,
+    info: <Info className="h-4 w-4 text-paper/70" />,
   };
 
   return (
     <ToastContext.Provider value={{ notify, showError }}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex flex-col items-center gap-2 px-4">
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6 md:left-auto md:right-6 md:items-end"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
-            role="status"
-            className={`pointer-events-auto w-full max-w-md rounded-xl px-4 py-3 text-sm text-white shadow-lg ${tones[t.tone]}`}
+            role={t.tone === "error" ? "alert" : "status"}
+            className="pointer-events-auto flex w-full max-w-sm animate-rise items-start gap-3 rounded-lg bg-ink px-4 py-3 text-sm text-paper shadow-[0_10px_30px_rgb(0_0_0/0.22)]"
           >
-            <p className="font-semibold">{t.message}</p>
-            {t.nextStep && <p className="mt-0.5 text-white/85">{t.nextStep}</p>}
+            <span className="mt-0.5">{icons[t.tone]}</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{t.message}</p>
+              {t.nextStep && <p className="mt-0.5 text-paper/65">{t.nextStep}</p>}
+            </div>
+            <button onClick={() => dismiss(t.id)} aria-label="Dismiss" className="-mr-1 rounded p-0.5 text-paper/50 hover:text-paper">
+              <X className="h-4 w-4" />
+            </button>
           </div>
         ))}
       </div>

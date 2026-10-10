@@ -33,15 +33,6 @@ export const STATUS_LABELS: Record<Status, string> = {
   returned: "Returned",
 };
 
-export const STATUS_STYLES: Record<Status, string> = {
-  available: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  worn: "bg-amber-50 text-amber-700 ring-amber-200",
-  in_wash: "bg-sky-50 text-sky-700 ring-sky-200",
-  unavailable: "bg-slate-100 text-slate-600 ring-slate-200",
-  on_the_way: "bg-violet-50 text-violet-700 ring-violet-200",
-  returned: "bg-rose-50 text-rose-700 ring-rose-200",
-};
-
 export const OWNER_LABELS: Record<Owner, string> = {
   me: "Mine",
   child: "My child's",
@@ -72,15 +63,6 @@ export const OCCASION_LABELS: Record<string, string> = {
   funeral: "Funeral",
   sport: "Sport",
   other: "Other",
-};
-
-export const TRAVEL_LABELS: Record<string, string> = {
-  walk: "🚶 Walking",
-  cycle: "🚲 Cycling",
-  bus: "🚌 Bus",
-  train: "🚆 Train / Luas",
-  car: "🚗 Car",
-  unknown: "Travel not given",
 };
 
 const COLOURS: Record<string, string> = {
