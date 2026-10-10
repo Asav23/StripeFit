@@ -184,9 +184,24 @@ def call_json(
     raise AIError(task, "invalid_output", last_error)
 
 
+REASONING_HEADROOM_TOKENS = 3000  # extra room when a model is allowed to think before answering
+
+
+def _reasoning() -> dict[str, Any]:
+    """OpenRouter's unified reasoning switch (ignored by models that don't reason). See config.AI_REASONING."""
+    mode = settings.AI_REASONING.strip().lower()
+    if mode == "off":
+        return {"reasoning": {"enabled": False}}
+    if mode in ("minimal", "low", "medium", "high"):
+        return {"reasoning": {"effort": mode}}
+    return {}
+
+
 def _request(task: str, model: str, fallbacks: list[str], conversation: list[dict[str, Any]],
              max_tokens: int, temperature: float) -> tuple[str | None, int]:
     """One HTTP call with a single short backoff retry on 429 / 5xx / timeout."""
+    if settings.AI_REASONING.strip().lower() != "off":
+        max_tokens += REASONING_HEADROOM_TOKENS
     for attempt in range(2):
         started = time.perf_counter()
         try:
@@ -196,7 +211,7 @@ def _request(task: str, model: str, fallbacks: list[str], conversation: list[dic
                 response_format={"type": "json_object"},
                 temperature=temperature,
                 max_tokens=max_tokens,
-                extra_body={"models": [model, *fallbacks], "usage": {"include": True}},
+                extra_body={"models": [model, *fallbacks], "usage": {"include": True}, **_reasoning()},
             )
         except AuthenticationError as exc:
             _log_call(task, model, started, success=False, error=f"auth: {exc.status_code}")

@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     MODEL_STYLIST_FALLBACKS: str = ""
     USE_MOCK_AI: bool = True
     AI_TIMEOUT_SECONDS: float = 45
+    # Reasoning ("thinking") models such as DeepSeek V4 can spend the whole token budget thinking and return
+    # nothing. Our tasks are structured extraction/picking, so thinking is off by default.
+    # "off" = disabled, "low" = a little, "default" = the model decides.
+    AI_REASONING: str = "off"
 
     # Stripe (test mode only)
     STRIPE_SECRET_KEY: str = ""
