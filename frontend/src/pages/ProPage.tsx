@@ -88,10 +88,13 @@ export default function ProPage() {
       <Button size="lg" onClick={buy} loading={busy} className="w-full md:w-auto">
         <CreditCard className="h-4 w-4" /> Buy StripeFit Pro · €2.99
       </Button>
-      {!me.stripe_configured && <Notice tone="warn">Payments aren't set up on this server yet (no Stripe test key), so checkout won't open.</Notice>}
-      <p className="text-[13px] text-muted">
-        Test mode: no real money moves. Pay with <span className="font-mono text-ink-2">4242 4242 4242 4242</span>, any future expiry and any CVC.
-      </p>
+      {me.stripe_configured ? (
+        <p className="text-[13px] text-muted">
+          Test mode: no real money moves. Pay with <span className="font-mono text-ink-2">4242 4242 4242 4242</span>, any future expiry and any CVC.
+        </p>
+      ) : (
+        <Notice tone="info">Demo mode: Stripe keys aren't set up yet, so checkout is simulated and nothing is charged.</Notice>
+      )}
     </div>
   );
 
