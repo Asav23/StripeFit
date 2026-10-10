@@ -1,8 +1,8 @@
 import type {
   AICallLog,
+  EmailJob,
   GmailJob,
   GmailStatus,
-  IngestSummary,
   Item,
   ItemEdit,
   Me,
@@ -82,8 +82,9 @@ export const api = {
 
   // adding + review
   uploadPhotos: (files: File[]) => request<PhotoResult[]>("/api/ingest/photo", form(files)),
-  ingestEmails: (files: File[]) => request<IngestSummary>("/api/ingest/email", form(files)),
-  ingestSamples: () => request<IngestSummary>("/api/ingest/samples", json("POST")),
+  ingestEmails: (files: File[]) => request<EmailJob>("/api/ingest/email", form(files)),
+  ingestSamples: () => request<EmailJob>("/api/ingest/samples", json("POST")),
+  ingestJob: (id: string) => request<EmailJob>(`/api/ingest/jobs/${id}`),
   review: () => request<ReviewItem[]>("/api/review"),
   confirm: (id: number, data: ItemEdit & { duplicate_decision?: "merge" | "keep_both"; merge_target_id?: number }) =>
     request<{ item: Item; merged: boolean }>(`/api/review/${id}/confirm`, json("POST", data)),

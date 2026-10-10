@@ -2,6 +2,8 @@
 .env
 backend/.env
 backend/.gmail_token.json
+backend/.gmail_oauth_pending.json
+.gmail_oauth_pending.json
 .gmail_token.json
 
 # Python

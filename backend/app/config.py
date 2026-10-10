@@ -11,6 +11,7 @@ ENV_FILE = BACKEND_DIR / ".env"
 UPLOAD_DIR = BACKEND_DIR / "uploads"
 DB_PATH = BACKEND_DIR / "stripefit.db"
 GMAIL_TOKEN_PATH = BACKEND_DIR / ".gmail_token.json"
+GMAIL_PENDING_PATH = BACKEND_DIR / ".gmail_oauth_pending.json"  # in-flight sign-ins (PKCE), survives reloads
 MOCKS_DIR = Path(__file__).resolve().parent / "ai" / "mocks"
 
 
@@ -51,6 +52,7 @@ class Settings(BaseSettings):
     DEFAULT_LON: float = -6.2603
     TIMEZONE: str = "Europe/Dublin"
     FREE_ITEM_LIMIT: int = 20
+    DEMO_CONTROLS: bool = True  # /api/debug/* (AI log, demo switches). Set false if this is ever deployed.
 
     @property
     def tz(self) -> ZoneInfo:

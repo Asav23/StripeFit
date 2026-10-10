@@ -5,9 +5,11 @@ order-ish subjects. Message bodies are processed in memory and never stored.
 """
 
 import base64
+import json
 import logging
 import os
 import threading
+import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -19,7 +21,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from sqlmodel import Session, select
 
-from app.config import GMAIL_TOKEN_PATH, settings
+from app.config import GMAIL_PENDING_PATH, GMAIL_TOKEN_PATH, settings
 from app.db import engine
 from app.models import IngestLog
 from app.schemas import FileIngestResult
@@ -34,7 +36,25 @@ SUBJECT_TERMS = ("order OR confirmation OR receipt OR shipped OR dispatched OR d
 
 os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")  # Google may echo scopes in a different order
 
-_pending_verifiers: dict[str, Optional[str]] = {}  # OAuth state -> PKCE code verifier
+PENDING_TTL_SECONDS = 15 * 60  # a sign-in must finish within 15 minutes
+
+
+# In-flight sign-ins (OAuth state -> PKCE verifier) are kept in a small file, not in memory,
+# so an API reload between "Connect Gmail" and Google's callback doesn't break the sign-in.
+def _load_pending() -> dict[str, dict[str, Any]]:
+    try:
+        data = json.loads(GMAIL_PENDING_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+    now = time.time()
+    return {state: entry for state, entry in data.items() if now - entry.get("created", 0) < PENDING_TTL_SECONDS}
+
+
+def _save_pending(pending: dict[str, dict[str, Any]]) -> None:
+    if pending:
+        GMAIL_PENDING_PATH.write_text(json.dumps(pending))
+    else:
+        GMAIL_PENDING_PATH.unlink(missing_ok=True)
 
 
 def build_query(months: int) -> str:
@@ -58,15 +78,20 @@ def _flow(state: Optional[str] = None) -> Flow:
 def auth_url() -> str:
     flow = _flow()
     url, state = flow.authorization_url(access_type="offline", prompt="consent", include_granted_scopes="false")
-    _pending_verifiers[state] = flow.code_verifier
+    pending = _load_pending()
+    pending[state] = {"verifier": flow.code_verifier, "created": time.time()}
+    _save_pending(pending)
     return url
 
 
 def finish_auth(state: str, code: str) -> None:
-    if state not in _pending_verifiers:
+    pending = _load_pending()
+    entry = pending.pop(state, None)
+    _save_pending(pending)
+    if entry is None:
         raise ValueError("Unknown or expired sign-in attempt.")
     flow = _flow(state=state)
-    flow.code_verifier = _pending_verifiers.pop(state)
+    flow.code_verifier = entry["verifier"]
     flow.fetch_token(code=code)
     GMAIL_TOKEN_PATH.write_text(flow.credentials.to_json())
 
@@ -114,8 +139,10 @@ def job_status() -> dict[str, Any]:
 def start_import(months: int) -> bool:
     """Start a background import. Returns False if one is already running."""
     global _job
+    from app.services import ingest_jobs  # local import: ingest_jobs imports this module
+
     with _job_lock:
-        if _job.running:
+        if _job.running or ingest_jobs.any_running():
             return False
         _job = ImportJob(running=True)
     threading.Thread(target=_run_import, args=(months,), daemon=True).start()

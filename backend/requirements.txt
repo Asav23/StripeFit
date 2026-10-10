@@ -15,4 +15,5 @@ beautifulsoup4>=4.12
 pillow>=10.4
 imagehash>=4.3
 pypdf>=4.3
+pillow-heif>=0.18  # optional: iPhone HEIC photos
 tzdata  # time zone data on Windows, which has no system tz database

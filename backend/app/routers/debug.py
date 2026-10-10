@@ -14,7 +14,13 @@ from app.models import AICall, IngestLog
 from app.services import weather
 from app.services.limits import get_user
 
-router = APIRouter(prefix="/api/debug", tags=["debug"])
+def _demo_controls_on() -> None:
+    """These endpoints have no auth (local single-user prototype), so they can be switched off."""
+    if not settings.DEMO_CONTROLS:
+        raise api_error(404, "not_found", "Demo controls are turned off.", "Set DEMO_CONTROLS=true in backend/.env.")
+
+
+router = APIRouter(prefix="/api/debug", tags=["debug"], dependencies=[Depends(_demo_controls_on)])
 
 
 @router.get("/ai-calls")

@@ -136,6 +136,16 @@ export interface IngestSummary {
   summary: string;
 }
 
+export interface EmailJob {
+  id: string;
+  running: boolean;
+  total: number;
+  done: number;
+  error: string | null;
+  results: FileIngestResult[];
+  summary: IngestSummary | null;
+}
+
 export interface GmailJob {
   running: boolean;
   total: number;
