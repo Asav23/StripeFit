@@ -18,22 +18,22 @@ router = APIRouter(prefix="/api/gmail", tags=["gmail"])
 log = logging.getLogger("stripefit.gmail")
 
 
-def _require_configured() -> None:
-    if not settings.gmail_configured:
-        raise api_error(503, "gmail_not_configured", "Gmail import isn't set up yet.",
-                        "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to backend/.env and restart the API.")
-
-
 @router.get("/status")
 def status() -> dict[str, Any]:
-    connected = settings.gmail_configured and gmail.credentials() is not None
-    return {"configured": settings.gmail_configured, "connected": connected, "job": gmail.job_status()}
+    return {
+        "configured": settings.gmail_configured,
+        "demo": gmail.demo_mode(),
+        "connected": gmail.is_connected(),
+        "job": gmail.job_status(),
+    }
 
 
 @router.get("/auth-url")
 def auth_url(session: Session = Depends(get_session)) -> dict[str, str]:
     require_pro(session, "Gmail import")
-    _require_configured()
+    if gmail.demo_mode():  # no Google keys: connect the demo inbox and go straight back to the app
+        gmail.connect_demo()
+        return {"url": f"{settings.FRONTEND_URL}/add?tab=gmail&gmail=connected"}
     return {"url": gmail.auth_url()}
 
 
@@ -64,8 +64,7 @@ class ImportRequest(BaseModel):
 @router.post("/import")
 def start_import(body: ImportRequest, session: Session = Depends(get_session)) -> dict[str, Any]:
     require_pro(session, "Gmail import")
-    _require_configured()
-    if gmail.credentials() is None:
+    if not gmail.is_connected():
         raise api_error(409, "gmail_not_connected", "Gmail isn't connected.", "Tap “Connect Gmail” first.")
     if not gmail.start_import(body.months):
         raise api_error(409, "import_running", "An import is already running.", "Wait for it to finish.")

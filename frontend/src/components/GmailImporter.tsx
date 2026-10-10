@@ -113,7 +113,7 @@ export default function GmailImporter() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="space-y-4">
-        {!status.configured ? (
+        {!status.configured && !status.demo ? (
           <Notice tone="warn">
             <p className="font-medium">Gmail import isn't set up on this server yet.</p>
             <p className="mt-0.5 text-ink-2">
@@ -128,17 +128,21 @@ export default function GmailImporter() {
             </span>
             <div>
               <h3 className="display text-[20px]">Let your inbox fill your wardrobe</h3>
-              <p className="mt-1 text-sm text-ink-2">Connect once; import whenever you've bought something new.</p>
+              <p className="mt-1 text-sm text-ink-2">
+                {status.demo
+                  ? "Demo mode: Google sign-in isn't set up yet, so this connects a sample inbox of 16 order emails."
+                  : "Connect once; import whenever you've bought something new."}
+              </p>
             </div>
             <Button onClick={connect} loading={busy}>
-              Connect Gmail
+              {status.demo ? "Connect demo inbox" : "Connect Gmail"}
             </Button>
           </div>
         ) : (
           <div className="space-y-4 rounded-xl border border-line bg-card p-5 shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-medium">
-                <span className="h-2 w-2 rounded-full bg-ok" /> Gmail connected (read-only)
+                <span className="h-2 w-2 rounded-full bg-ok" /> {status.demo ? "Demo inbox connected (sample order emails)" : "Gmail connected (read-only)"}
               </p>
               <button onClick={disconnect} className="text-[13px] text-muted underline-offset-4 hover:text-ink hover:underline" disabled={busy}>
                 Disconnect

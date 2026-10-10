@@ -148,6 +148,7 @@ export interface GmailJob {
 
 export interface GmailStatus {
   configured: boolean;
+  demo: boolean;
   connected: boolean;
   job: GmailJob;
 }

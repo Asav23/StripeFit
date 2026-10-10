@@ -2,6 +2,9 @@
 
 We never list the whole inbox: the search query restricts to allowlisted senders and
 order-ish subjects. Message bodies are processed in memory and never stored.
+
+Demo mode: while no Google OAuth client is configured, "Connect" links a demo inbox that serves
+the synthetic sample emails in samples/emails, run through exactly the same import pipeline.
 """
 
 import base64
@@ -19,7 +22,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from sqlmodel import Session, select
 
-from app.config import GMAIL_TOKEN_PATH, settings
+from app.config import BACKEND_DIR, GMAIL_TOKEN_PATH, settings
 from app.db import engine
 from app.models import IngestLog
 from app.schemas import FileIngestResult
@@ -35,6 +38,21 @@ SUBJECT_TERMS = ("order OR confirmation OR receipt OR shipped OR dispatched OR d
 os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")  # Google may echo scopes in a different order
 
 _pending_verifiers: dict[str, Optional[str]] = {}  # OAuth state -> PKCE code verifier
+SAMPLE_INBOX = BACKEND_DIR / "samples" / "emails"
+_demo_connected = False
+
+
+def demo_mode() -> bool:
+    return not settings.gmail_configured
+
+
+def connect_demo() -> None:
+    global _demo_connected
+    _demo_connected = True
+
+
+def is_connected() -> bool:
+    return _demo_connected if demo_mode() else credentials() is not None
 
 
 def build_query(months: int) -> str:
@@ -86,6 +104,8 @@ def credentials() -> Optional[Credentials]:
 
 
 def disconnect() -> None:
+    global _demo_connected
+    _demo_connected = False
     GMAIL_TOKEN_PATH.unlink(missing_ok=True)
 
 
@@ -124,11 +144,14 @@ def start_import(months: int) -> bool:
 
 def _run_import(months: int) -> None:
     try:
-        creds = credentials()
-        if creds is None:
-            _job.error = "Gmail isn't connected any more. Connect it again."
-            return
-        service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+        if demo_mode():
+            service: Any = _SampleInbox()
+        else:
+            creds = credentials()
+            if creds is None:
+                _job.error = "Gmail isn't connected any more. Connect it again."
+                return
+            service = build("gmail", "v1", credentials=creds, cache_discovery=False)
         messages = _search(service, build_query(months))
         with Session(engine) as session:
             logs = session.exec(select(IngestLog).where(IngestLog.source == "gmail")).all()
@@ -170,3 +193,32 @@ def _search(service: Any, query: str) -> list[dict[str, str]]:
         if not page_token:
             break
     return found[:MAX_MESSAGES]
+
+
+class _SampleInbox:
+    """Demo stand-in for the Gmail API: serves samples/emails/*.eml with the same call shape."""
+
+    def __init__(self) -> None:
+        self.files = sorted(SAMPLE_INBOX.glob("*.eml"))
+
+    def users(self) -> "_SampleInbox":
+        return self
+
+    def messages(self) -> "_SampleInbox":
+        return self
+
+    def list(self, **_: Any) -> "_Result":
+        return _Result({"messages": [{"id": f"demo-{i:03d}"} for i in range(len(self.files))]})
+
+    def get(self, id: str, **_: Any) -> "_Result":
+        index = int(id.split("-")[1])
+        raw = base64.urlsafe_b64encode(self.files[index].read_bytes()).decode()
+        return _Result({"raw": raw, "internalDate": str(index)})
+
+
+class _Result:
+    def __init__(self, value: dict[str, Any]) -> None:
+        self.value = value
+
+    def execute(self) -> dict[str, Any]:
+        return self.value

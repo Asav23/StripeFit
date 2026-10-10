@@ -32,9 +32,19 @@ async def webhook(request: Request, session: Session = Depends(get_session)) -> 
     return {"received": True}
 
 
+@router.post("/demo/complete")
+def demo_complete(session: Session = Depends(get_session)) -> dict[str, Any]:
+    """Demo mode only (no Stripe keys): simulate a successful payment."""
+    purchase = stripe_service.complete_demo_checkout(session)
+    return {"session_id": purchase.stripe_session_id}
+
+
 @router.get("/session/{session_id}")
 def session_status(session_id: str, session: Session = Depends(get_session)) -> dict[str, Any]:
     """Called by the success page: confirms with Stripe directly, so Pro works even if the webhook is late."""
+    demo = stripe_service.demo_purchase(session, session_id)
+    if demo is not None:
+        return {"paid": True, "payment_status": "paid", "purchase": PurchaseOut.model_validate(demo.model_dump())}
     data = stripe_service.retrieve_session(session_id)
     if not stripe_service.is_paid_pro_session(data):
         return {"paid": False, "payment_status": data.get("payment_status"), "purchase": None}

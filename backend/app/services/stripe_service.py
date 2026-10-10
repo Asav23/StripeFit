@@ -3,9 +3,14 @@
 Pro is only ever activated from a *verified* Stripe confirmation: a signed webhook, or a
 Checkout Session we retrieved from Stripe ourselves with payment_status == "paid".
 Activation is idempotent on the Checkout Session ID.
+
+Demo mode: while no Stripe test key is configured, checkout is simulated locally so the Pro
+features can still be shown. It switches off automatically as soon as STRIPE_SECRET_KEY is set,
+so it can never bypass a real Stripe payment.
 """
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -25,6 +30,7 @@ PRICE_LOOKUP_KEY = "stripefit_pro_eur_299"
 PRICE_CENTS = 299
 CURRENCY = "eur"
 USER_REF = "1"  # single demo user
+DEMO_PREFIX = "demo_"
 
 
 def _client() -> stripe.StripeClient:
@@ -44,7 +50,13 @@ def _line_item() -> dict[str, Any]:
     }
 
 
+def demo_mode() -> bool:
+    return not settings.stripe_configured
+
+
 def create_checkout_session() -> str:
+    if demo_mode():
+        return f"{settings.FRONTEND_URL}/pro/checkout"
     try:
         session = _client().v1.checkout.sessions.create(params={
             "mode": "payment",
@@ -70,7 +82,7 @@ def is_paid_pro_session(data: dict[str, Any]) -> bool:
     )
 
 
-def activate_pro(session: Session, data: dict[str, Any]) -> Purchase:
+def activate_pro(session: Session, data: dict[str, Any], status: str = "paid") -> Purchase:
     """Idempotent: one Purchase per Checkout Session ID, premium switched on once."""
     session_id = data["id"]
     purchase = session.exec(select(Purchase).where(Purchase.stripe_session_id == session_id)).first()
@@ -80,7 +92,7 @@ def activate_pro(session: Session, data: dict[str, Any]) -> Purchase:
             stripe_session_id=session_id,
             amount_total=data.get("amount_total"),
             currency=data.get("currency"),
-            status="paid",
+            status=status,
             created_at=datetime.fromtimestamp(created, timezone.utc) if created else utcnow(),
         )
         session.add(purchase)
@@ -120,3 +132,18 @@ def parse_webhook(payload: bytes, signature: str | None) -> dict[str, Any]:
     except (ValueError, stripe.SignatureVerificationError):
         raise api_error(400, "bad_signature", "Invalid webhook signature.")
     return event.to_dict()
+
+
+def complete_demo_checkout(session: Session) -> Purchase:
+    """Simulated payment for demo mode: records a €2.99 purchase and switches Pro on."""
+    if not demo_mode():
+        raise api_error(409, "demo_disabled", "Demo checkout is off because real Stripe keys are configured.",
+                        "Use the normal checkout.")
+    data = {"id": f"{DEMO_PREFIX}{uuid.uuid4().hex[:24]}", "amount_total": PRICE_CENTS, "currency": CURRENCY}
+    return activate_pro(session, data, status="demo")
+
+
+def demo_purchase(session: Session, session_id: str) -> Purchase | None:
+    if not session_id.startswith(DEMO_PREFIX):
+        return None
+    return session.exec(select(Purchase).where(Purchase.stripe_session_id == session_id)).first()

@@ -6,6 +6,7 @@ import { MeProvider, ToastProvider } from "./context";
 import "./index.css";
 import AddPage from "./pages/AddPage";
 import AiLogPage from "./pages/AiLogPage";
+import DemoCheckoutPage from "./pages/DemoCheckoutPage";
 import PlanPage from "./pages/PlanPage";
 import ProPage from "./pages/ProPage";
 import ProSuccessPage from "./pages/ProSuccessPage";
@@ -24,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="review" element={<ReviewPage />} />
               <Route path="plan" element={<PlanPage />} />
               <Route path="pro" element={<ProPage />} />
+              <Route path="pro/checkout" element={<DemoCheckoutPage />} />
               <Route path="pro/success" element={<ProSuccessPage />} />
               <Route path="ai-log" element={<AiLogPage />} />
               <Route path="*" element={<WardrobePage />} />

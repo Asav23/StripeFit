@@ -101,6 +101,7 @@ export const api = {
   checkout: () => request<{ url: string }>("/api/stripe/checkout", json("POST")),
   stripeSession: (id: string) =>
     request<{ paid: boolean; payment_status: string; purchase: Purchase | null }>(`/api/stripe/session/${encodeURIComponent(id)}`),
+  demoCheckout: () => request<{ session_id: string }>("/api/stripe/demo/complete", json("POST")),
   resetPremium: () => request<{ premium: boolean }>("/api/debug/reset-premium", json("POST")),
 
   // gmail
