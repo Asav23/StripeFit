@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -61,6 +62,12 @@ class Settings(BaseSettings):
     VAPID_SUBJECT: str = "mailto:stripefit-demo@example.com"  # contact for push services; use a real team address if deployed
     DAILY_SCHEDULER_ENABLED: bool = True
     DEMO_CONTROLS: bool = True  # /api/debug/* (AI log, demo switches). Set false if this is ever deployed.
+
+    @field_validator("FRONTEND_URL")
+    @classmethod
+    def _no_trailing_slash(cls, value: str) -> str:
+        """Links are built as f"{FRONTEND_URL}/today", and CORS needs the exact origin."""
+        return value.rstrip("/")
 
     @property
     def tz(self) -> ZoneInfo:
