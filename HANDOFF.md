@@ -41,6 +41,75 @@ Nobody has clicked through the frontend redesign (commit `90b5ed5`) yet. It type
 - every AI action shows a loading state;
 - the layout works at phone width.
 
+## Next: outfits that suit the event and the person
+
+**Goal:** the stylist model on OpenRouter should pick the best combination for the event, and learn what each user likes. Do this after the real-AI checks in step 1 pass.
+
+**How it works today:**
+- The parser maps a request to one of 10 occasions, such as `interview`, `wedding` and `night_out`.
+- `services/rules.py` turns the occasion into a formality range from 1 to 5, plus weather rules. The model gets only the items that pass these rules.
+- The stylist prompt (`PICK_SYSTEM` in `app/ai/prompts.py`) knows the occasion name, the formality range, the weather and `days_since_worn`. It has no guidance on what is appropriate for an event, beyond colours that work together.
+- The only personal signal stored is a thumbs up or down per outfit (`Outfit.feedback`) and `Item.last_worn`. Swaps aren't recorded, so the app never learns which item the user rejected.
+
+The model can't be trusted to "just know" what suits an event. It needs the context written down, and it needs the user's history passed in. The stages below do that, in order. Each one is useful on its own.
+
+### Stage 1: event knowledge (no new data needed)
+1. **Add an event style guide** as a constant in `services/rules.py`. Business rules live there, not in prompts. Give each occasion a few short lines on:
+   - what is expected;
+   - what to avoid;
+   - typical good combinations.
+
+   Examples:
+   - **Wedding guest:** don't wear white or cream. Dressier than work.
+   - **Funeral:** dark, muted colours, no logos.
+   - **Interview:** one step dressier than the company's everyday wear. Clean shoes.
+   - **Night out in Dublin:** you'll walk between venues and queue outside, so take a jacket you can carry.
+   - **Sport:** breathable fabrics. Bring a layer for afterwards.
+2. **Add occasions students actually have:** debs or ball, college society events, GAA or rugby match as a spectator, festival, gym, travel day, presentation, part-time job. Each needs a formality range and a style guide entry.
+3. **Send the relevant guide entry** to the model in the `requirements` block of `pick_messages()`. Tell the prompt to follow it and to say in the explanation which guide point it applied.
+4. **Add colour and combination rules** to the guide:
+   - at most one bold colour or pattern;
+   - neutrals go with everything;
+   - match the formality of shoes and top;
+   - match leather colours where the user cares.
+5. **Ask instead of guessing.** When the dress code is unclear, for example "a wedding" with no dress code, use the existing `needs_clarification` field to ask one question. Keep the rule: "do not guess".
+
+### Stage 2: richer context per request
+1. **Parse more detail** in `ParsedRequest`:
+   - indoor or outdoor;
+   - how long the event lasts;
+   - activity, such as standing, dancing or walking a lot;
+   - time of day;
+   - an explicit dress code.
+2. **Use weather across the event's hours**, not only the start hour. A 7pm to 2am night out gets much colder by the end.
+3. **Pass the item features the model needs** to judge combinations: colours, material, pattern, fit, and formality per item. Fill these in through the Review screen.
+
+### Stage 3: learn each user's taste (personalisation without training)
+1. **Record signals.** Add a small `StyleSignal` table (`user_id`, `kind`, `item_id`, `outfit_id`, `occasion`, `created_at`). New tables are created on startup by `init_db()` in `db.py`, so no reset is needed. Record:
+   - thumbs up or down;
+   - each swap, as the item rejected and the item chosen;
+   - outfits actually worn;
+   - items that are always available but never picked;
+   - edits the user makes in Review.
+2. **Build a style profile per user** from those signals. Keep it as plain data, recomputed after each signal:
+   - favourite and avoided colours;
+   - items they love or never wear;
+   - whether they lean dressier or more relaxed than the default for each occasion;
+   - combinations they've liked.
+3. **Give the model the profile.** Add a short profile summary and two or three past outfits the user liked for the same occasion to `pick_messages()`, as examples. The model then adapts to that user straight away, with no training run. It's cheap, and it switches off cleanly by leaving the profile out.
+4. **Keep the guardrails.** The profile may change the model's choice within the candidates, never the rules. Weather and formality filters still run first, and every returned ID is still validated. Don't infer body shape or gender. Ask about preferences instead, or let the user set them on a small "My style" screen.
+
+### Stage 4: measure before and after each change
+1. **Write `scripts/check_outfits.py`**, built like `check_extraction.py`. Use a fixed set of about 30 scenarios: occasion, weather and wardrobe, with the expected picks or must-avoid rules. For example: no white at a wedding, waterproof jacket in rain, no suede in rain.
+2. **Score each change with code checks first**, such as formality range, weather and must-avoid rules. Optionally, have a second model on OpenRouter grade appropriateness from 1 to 5 against the style guide.
+3. **Track the thumbs-up rate and the swap rate** for each prompt version on the AI log page. Keep a prompt change only if those numbers improve.
+
+### Stage 5: actual training (later; needs a team decision)
+- **OpenRouter serves models but, as far as we know, doesn't offer fine-tuning.** Check this before planning around it. Fine-tuning would mean calling a provider directly, which breaks the "OpenRouter only" rule in `CLAUDE.md`. That rule would have to change first.
+- **A cheaper "trained" option that keeps the rule:** a small local re-ranker trained on each user's signals. For example, a logistic regression on item features and occasion that predicts thumbs up. It orders the candidates before the model sees them. It runs locally, costs nothing per call, and is genuinely per user.
+- **Start collecting the dataset now.** Store context, candidates, pick and feedback as JSONL rows from the `StyleSignal` and `Outfit` tables. Never include email content or personal data. Get the user's consent before any data leaves the machine.
+- **Multiple users.** Today there is one demo user (`User` id 1) and no login. Key everything by `user_id` from the start, so adding real accounts later doesn't mean a rewrite.
+
 ## Done on this branch
 
 | Change | Where |
