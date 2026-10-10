@@ -17,7 +17,7 @@ from app.config import settings
 from app.errors import api_error
 from app.models import Item, Outfit, as_utc, utcnow
 from app.schemas import OutfitOut, OutfitPick, OutfitSlotOut, ParsedRequest, PlanResponse, WeatherOut
-from app.services import rules, style_profile, weather as weather_service
+from app.services import laundry, rules, style_profile, weather as weather_service
 from app.services.request_rules import parse_request_rules
 from app.services.serialize import item_out
 
@@ -239,11 +239,16 @@ def _without(candidates: dict[str, list[Item]], exclude_ids: set[int]) -> dict[s
 
 def build_outfit(session: Session, wardrobe: list[Item], text: str, parsed: ParsedRequest, *,
                  parse_fallback: bool = False, notices: Optional[list[str]] = None, kind: str = "plan",
-                 for_date: Optional[str] = None, exclude_ids: Iterable[int] = ()) -> Outfit:
-    """weather (whole event) -> rules -> user's taste -> AI pick -> validate -> save. Shared by plans and daily fits."""
+                 for_date: Optional[str] = None, exclude_ids: Iterable[int] = (), extra: Optional[dict[str, Any]] = None,
+                 weather_place: Optional[str] = None) -> Outfit:
+    """weather (whole event) -> rules -> user's taste -> AI pick -> validate -> save. Shared by plans and daily fits.
+
+    extra: more context for the model and the saved outfit (e.g. the day's calendar events, without titles).
+    weather_place: look up the weather here instead of parsed.destination (keeps calendar text away from the AI).
+    """
     notices = list(notices or [])
-    parsed_dict = parsed.model_dump()
-    weather_obj, weather_notices = weather_service.forecast_for(parsed.destination, _when(parsed),
+    parsed_dict = {**parsed.model_dump(), **(extra or {})}
+    weather_obj, weather_notices = weather_service.forecast_for(weather_place or parsed.destination, _when(parsed),
                                                                 rules.event_hours(parsed_dict))
     notices += weather_notices
     weather = weather_obj.model_dump() if weather_obj else None
@@ -314,10 +319,10 @@ def swap_slot(session: Session, outfit: Outfit, slot: str) -> Outfit:
 
 
 def wear_outfit(session: Session, outfit: Outfit) -> Outfit:
+    """Tops go to the wash pile after one wear; jeans after a few; coats and shoes never (rules.WEARS_BEFORE_WASH)."""
     now = utcnow()
     for item in session.exec(select(Item).where(col(Item.id).in_(_all_ids(outfit.item_ids)))).all():
-        item.status = "worn"
-        item.last_worn = now
+        laundry.record_wear(item, now)
         session.add(item)
     outfit.worn = True
     style_profile.record(session, "worn", _all_ids(outfit.item_ids), outfit_id=outfit.id,

@@ -6,7 +6,7 @@ Read `CLAUDE.md` (project rules) and `PLAN.md` (phased spec) first. This file sa
 
 ## Status in one paragraph
 
-All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks and a daily casual fit with morning notifications (backend only; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
+All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks, and a daily outfit planned from Google Calendar, the weather and your laundry, sent as a notification the night before (backend only; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
 
 ## What's left to do
 
@@ -34,6 +34,9 @@ Pro unlocks order-email and Gmail import. **Those screens, including the new imp
 3. Create an OAuth client ID of type **Web application**, with the redirect URI `http://localhost:8000/api/gmail/callback`.
 4. In `backend/.env`, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 5. In the app, go to **Add → Gmail → Connect Gmail** and approve the consent screen. Then import, and check that re-running imports nothing new and that Disconnect works.
+
+### 3b. Google Calendar (needs the same Google OAuth client)
+See "Human step: connect Google Calendar" in the daily outfit section below. Until then, use the demo calendar.
 
 ### 4. Click through the UI
 Nobody has clicked through the frontend redesign (commit `90b5ed5`) yet. It type-checks and builds, and every page loads. Check that:
@@ -71,51 +74,84 @@ Nobody has clicked through the frontend redesign (commit `90b5ed5`) yet. It type
 6. **Stage 5: actual training.** As far as we know, OpenRouter doesn't offer fine-tuning, so fine-tuning would break the "OpenRouter only" rule in `CLAUDE.md`, and that's a team decision. Today's per-user "re-ranker" is the signal-weighted scoring in `style_profile.preference_score()`. It is transparent, local, free and per user. A learned model, such as logistic regression on the exported dataset, could replace it later without touching the API.
 7. **Multiple users.** Everything is keyed by `user_id` (always 1 today), so real accounts can be added without a rewrite.
 
-## Daily casual fit + morning notification (backend built)
+## Daily outfit from your calendar, weather and laundry, sent the night before (backend built)
 
-Every day there is a ready-made casual outfit, and optionally a browser notification each morning at a time the user picks.
+**Goal:** every evening, tell the user what to wear tomorrow. The outfit should be dressed for what is actually on their Google Calendar, ready for tomorrow's weather across the whole day, and made only from clothes that will be clean. A morning reminder is optional.
 
-**How it works.** `services/daily.py` builds today's request in code: casual, from 9am, 10 hours, walking, at the user's location or Dublin. It runs the normal pipeline: whole-day weather, rules, the user's taste, the AI stylist, then validation and the fallback. That costs one AI call a day.
-- **"Another option"** avoids the pieces already suggested today.
-- **Variety.** Yesterday's main pieces are avoided too, so the week doesn't repeat.
-- **Saved as outfits.** Daily outfits are `Outfit` rows with `kind="daily"` and `for_date`. Swap, wear and feedback use the normal `/api/outfits/{id}/…` endpoints, so they teach the taste profile too.
+### How a day is planned (`services/daily.py`)
+1. **Calendar.** `services/google_calendar.py` reads tomorrow's events. Each event title is turned into an occasion by keywords, for example "Final interview with Accenture" becomes interview and "Five-a-side" becomes sport. Events that say nothing about clothes, such as "Dentist", are ignored.
+   - The most demanding event sets the outfit, for example an interview over lectures.
+   - Events that need different clothes get a packing tip, such as "Sport at 19:00: bring your sports kit and trainers."
+   - With no calendar, or nothing clothes-related on it, the day is a casual day.
+   - Cancelled and declined events are skipped.
+2. **Weather for the whole day.** It covers the first event to the last, or 9am to 7pm, at the main event's location or the user's default location. The outfit is dressed for the coldest hour and the wettest hour, and `rain_from` says when rain starts.
+3. **The normal pipeline:** rules, then the style guide, then the user's taste, then the AI stylist, then validated IDs, then the rule-based fallback.
+4. **Laundry (`services/laundry.py`).**
+   - **Not everything needs a wash after one wear.** A top needs washing after 1 wear, jeans after 3, and coats, shoes and accessories never go in the wash from wearing (`rules.WEARS_BEFORE_WASH`). Putting an item in the wash resets its count.
+   - **The plan warns about laundry.** For example: "Wash your white oxford shirt tonight if you can: it's the best fit for tomorrow" when the right item is in the wash, "After tomorrow you'll have 1 clean top left. Put a wash on.", or a big pile waiting for the wash.
+5. **Variety.** Yesterday's main pieces are avoided. "Another option" avoids everything already suggested for that day.
+6. **Saved as outfits.** Daily outfits are `Outfit` rows with `kind="daily"` and `for_date`. The outfit sent last night is the one shown in the morning. If the calendar changes, it's rebuilt with the notice "Your calendar changed, so this outfit was updated." Swap, wear and feedback use the normal `/api/outfits/{id}/…` endpoints, so they also teach the taste profile and update laundry counts.
 
-**Notifications.** These are real browser push notifications (Web Push with VAPID), so no third-party account is needed.
-- The VAPID keys are already generated in this machine's `backend/.env`. On a new machine, run `python scripts/make_vapid_keys.py` once. It refuses to overwrite existing keys, because that would break every subscribed browser.
-- `services/scheduler.py` checks once a minute. It sends at most one notification a day, and it records the date it sent, so restarts never send twice.
-- If the computer was asleep at notification time, it still sends within 3 hours. If the user switches notifications on after that window, they start tomorrow.
-- Expired browser subscriptions are removed automatically.
-- Turn the scheduler off with `DAILY_SCHEDULER_ENABLED=false`.
-- Set `VAPID_SUBJECT` to a real team contact address before any deployment.
+**Privacy.** The Calendar scope is `calendar.events.readonly` only. Its token is separate from Gmail's: `backend/.calendar_token.json`, gitignored. Event titles and location text are shown to the user but **never stored and never sent to the AI**. Only the occasion and the start and end times are kept. The location is used only for the weather lookup. A test confirms the titles never appear in anything stored or sent to the model.
 
-**API**
+### Notifications
+- **Night before.** "Tomorrow's outfit" is sent at `evening_time`, default 20:00. For example: *"9°C, rain from 10:00. Interview 10:00, sport 19:00: white oxford shirt, navy suit trousers, black waterproof rain jacket, black leather oxford shoes, burgundy silk tie. Sport at 19:00: bring your sports kit and trainers."*
+- **Morning, optional.** "Your outfit for today" is sent at `time`.
+- **How they're sent.** These are real browser push notifications (Web Push with VAPID), and no extra account is needed. The keys are already in this machine's `backend/.env`; on a new machine, run `python scripts/make_vapid_keys.py` once. `services/scheduler.py` checks every minute. Each notification is sent at most once a day, and the date is recorded, so restarts never send twice. If the computer was asleep, it still sends within 3 hours. Expired subscriptions are removed. `DAILY_SCHEDULER_ENABLED=false` turns the scheduler off. Set `VAPID_SUBJECT` to a real team address before any deployment.
+
+### Demo without Google
+`POST /api/debug/demo-calendar` pretends the calendar has these events, on any day:
+
+```json
+{"events": [{"title": "Interview", "start": "10:00", "end": "11:00", "location": "Grand Canal Dock"},
+            {"title": "Football", "start": "19:00", "end": "20:00"}]}
+```
+
+Send `{"events": null}` to switch back to the real calendar. Combine it with the rain demo weather to show the full night-before message.
+
+### API
 
 | Method and path | What it does |
 |---|---|
-| `GET /api/daily` | Today's fit, created on the first request of the day, plus the settings |
-| `POST /api/daily/another` | A different fit for today |
-| `GET /api/daily/settings` | `{enabled, time, location, push_configured, subscriptions, last_sent_date}` |
-| `PUT /api/daily/settings` | Body `{enabled, time: "HH:MM", location}`, in Dublin time |
-| `GET /api/push/config` | `{configured, public_key}`, the public key the browser needs to subscribe |
+| `GET /api/daily?day=today\|tomorrow` | `{day, outfit, events, settings}`. Built on first request or by the scheduler, and rebuilt if the calendar changed |
+| `POST /api/daily/another?day=…` | A different outfit for that day |
+| `GET /api/daily/settings` | `{enabled, time, location, evening_enabled, evening_time, push_configured, subscriptions, last_sent_date, evening_last_sent, calendar_connected}` |
+| `PUT /api/daily/settings` | Body `{enabled, time, location, evening_enabled, evening_time}`. This is a full replace, so send every field. Times are "HH:MM" in Dublin time |
+| `GET /api/calendar/status` | `{configured, connected, demo}` |
+| `GET /api/calendar/auth-url` | The Google consent link. The callback is `/api/calendar/callback`, which redirects to `/plan?calendar=connected\|cancelled\|error` |
+| `POST /api/calendar/disconnect` | Deletes the token |
+| `GET /api/calendar/events?day=tomorrow` | The events as the planner sees them, with titles, for the owner only |
+| `GET /api/push/config` | `{configured, public_key}` |
 | `POST /api/push/subscribe` | Body is the browser's `PushSubscription.toJSON()` |
 | `POST /api/push/unsubscribe` | Body `{endpoint}` |
-| `POST /api/push/test` | Sends today's fit to every subscribed browser now |
+| `POST /api/push/test` | Sends tomorrow's outfit notification now |
+| `GET/POST /api/debug/demo-calendar` | The demo events (see above) |
 
-**Verified in mock mode:**
-- today's fit is created once and repeats on the second visit;
-- "another option" changes the main pieces;
-- an invalid time is rejected;
-- the scheduler is not due before the set time, sends once at that time, and not again that day;
-- there is no catch-up after 3 hours, and it's due again the next day;
-- a real VAPID-signed, encrypted push was accepted by a test endpoint;
-- an expired subscription (410) is removed.
+### Human step: connect Google Calendar
+This uses the same Google Cloud project and OAuth client as Gmail, in step 3 above.
+1. In Google Cloud Console, go to **APIs & Services → Library** and enable the **Google Calendar API**.
+2. On the **OAuth consent screen**, add the scope `.../auth/calendar.events.readonly`.
+3. Under **Credentials**, open the web OAuth client and add the authorised redirect URI `http://localhost:8000/api/calendar/callback`.
+4. Make sure `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are in `backend/.env`, and restart the API.
+5. Open the link from `GET /api/calendar/auth-url` and approve. Once the frontend exists, this will be a "Connect Google Calendar" button.
 
-**The frontend still needs to be built.** The backend is complete and the current UI doesn't use it yet. It needs:
-1. **A service worker** at `/sw.js`, placed in `frontend/public/`. On `push`, it shows `{title, body}` from the JSON payload. On `notificationclick`, it opens `data.url`, which is `/plan?daily=1`.
-2. **Subscribing.** Request `Notification` permission, call `pushManager.subscribe({userVisibleOnly: true, applicationServerKey: <public_key from /api/push/config, base64url-decoded>})`, then POST the result to `/api/push/subscribe` and `PUT /api/daily/settings` with `enabled: true`.
-3. **A "Today's casual fit" card**, on the Plan page or home. Show `GET /api/daily` with the existing `OutfitCard`, plus an "Another option" button, a notification switch, a time picker and "Send a test".
-4. **Unsubscribing.** Call `subscription.unsubscribe()`, then POST `/api/push/unsubscribe` and `PUT` settings with `enabled: false`.
-5. **Browser support.** Push works in Chrome, Edge and Firefox on `localhost`. On iPhone, it only works once the site is added to the Home Screen, which needs https in production.
+### Verified (mock mode, no Google account)
+- **Planning a day.** With no calendar, the plan is a casual day with 10-hour weather. With the demo calendar (interview, football and a dentist), the outfit is dressed for the interview with a football packing tip and weather from 10:00 to 20:30 at Grand Canal Dock. A dentist-only day is casual. Changing the calendar rebuilds the outfit.
+- **Privacy.** Titles and location text never reach stored outfits or the AI.
+- **Laundry.** A top goes in the wash after 1 wear, jeans after 3, and a coat never does. Washing resets the count. The plan says "wash your shirt tonight" and "low on clean tops".
+- **Night-before notification.** Not due at 19:30, sent at 20:05, and only once. The message contains the weather with the rain start time, the plan, the items and the packing tip. The next morning shows the same outfit.
+- **Real Google event parsing.** Cancelled and declined events are skipped, UTC times are converted to Dublin time, and all-day events are handled.
+- **OAuth.** The scope is calendar read-only only, with PKCE and the correct redirect URI. A forged state or a cancelled sign-in redirects safely.
+- **Not tested.** A real Google account, which needs the human step above.
+
+### The frontend still needs to be built
+The backend is complete. The current UI doesn't use any of this yet. It needs:
+1. **A service worker** at `/sw.js`, placed in `frontend/public/`. On `push`, it shows `{title, body}` from the JSON. On `notificationclick`, it opens `data.url`, either `/plan?daily=tomorrow` or `/plan?daily=today`.
+2. **A notification settings card.** It needs a "Night before" switch with a time picker (default 20:00) and an optional "Morning" switch with a time picker. Turning a switch on asks `Notification` permission, calls `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})` with the public key from `/api/push/config` (base64url-decoded), POSTs to `/api/push/subscribe`, then calls `PUT /api/daily/settings`. Add a "Send a test" button.
+3. **A "Tomorrow" / "Today" outfit card.** Show `GET /api/daily?day=…` with the existing `OutfitCard`. List the day's events, and show the notices for packing and laundry tips, plus an "Another option" button.
+4. **A "Connect Google Calendar" button** using `/api/calendar/auth-url`, and handling of `?calendar=connected|cancelled|error` on return.
+5. **Labels and weather.** Add labels for the new occasions in `frontend/src/lib/format.ts`. Show "down to X° later" and `rain_from` on the weather panel.
+6. **Browser support.** Push works in Chrome, Edge and Firefox on `localhost`. On iPhone, it only works once the site is added to the Home Screen, which needs https in production.
 
 ## Done on this branch
 
@@ -135,12 +171,15 @@ Every day there is a ready-made casual outfit, and optionally a browser notifica
 | Event style guide, 6 new occasions, colour rules, no white dress at weddings, whole-event weather | `services/rules.py`, `services/weather.py`, `app/ai/prompts.py` |
 | Richer requests (setting, duration, activity) from the AI and keyword parsers | `schemas.py`, `services/request_rules.py` |
 | Taste learning from thumbs, swaps and worn outfits; stated preferences | `services/style_profile.py`, `routers/style.py`, `StyleSignal` table |
-| Daily casual fit, scheduler and Web Push notifications | `services/daily.py`, `services/scheduler.py`, `services/push.py`, `routers/daily.py`, `routers/push.py` |
+| Daily outfit, scheduler and Web Push notifications (night before + morning) | `services/daily.py`, `services/scheduler.py`, `services/push.py`, `routers/daily.py`, `routers/push.py` |
+| Google Calendar (read-only) day planning, demo calendar | `services/google_calendar.py`, `routers/google_calendar.py`, `services/daily.py` |
+| Laundry: wears before washing, "wash it tonight" and low-on-clean tips | `services/laundry.py`, `rules.WEARS_BEFORE_WASH` |
 | Outfit scenario checker, dataset export, VAPID key script | `scripts/check_outfits.py`, `scripts/export_style_dataset.py`, `scripts/make_vapid_keys.py` |
 
 API change: `POST /api/ingest/email` and `POST /api/ingest/samples` now return `202` with a job. Poll `GET /api/ingest/jobs/{id}` for progress and the summary. The frontend is already updated.
 
 ## Verified (mock AI mode)
+- **Calendar, night-before and laundry: 46 of 46 checks passed.**
 - **New features: 37 of 37 checks passed.** They cover the new occasions, the wedding colour rule, the style guide in the prompt, taste learning, the daily fit, the scheduler and push. `check_outfits.py --mock` scores 28 of 28. The original 68-check smoke test still passes.
 - **Smoke test, 68 of 68 checks passed.** It covers wardrobe CRUD and laundry, photos and the Review queue (duplicates, merge, non-clothing, AI down, HEIC), the free limit, and outfits for 4 occasions. It also covers rain rules, invalid AI picks, AI down and swap/wear. Stripe was tested with locally signed webhooks: bad signature, unpaid and triple delivery. It also covers all 18 sample emails, re-import, the injection email, Gmail without keys, and the debug pages. It ran on an in-memory database copy and isn't committed, because `CLAUDE.md` says no test suite.
 - **Frontend:** `npx tsc --noEmit` passes, `npm run build` succeeds, and every route loads.

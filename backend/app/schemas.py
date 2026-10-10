@@ -344,6 +344,7 @@ class WeatherOut(BaseModel):
     temperature_min_c: Optional[float] = None
     temperature_max_c: Optional[float] = None
     precipitation_probability_max: Optional[int] = None
+    rain_from: Optional[str] = None  # "HH:MM": first wet hour of the event, if any
 
 
 class OutfitSlotOut(BaseModel):
@@ -428,10 +429,15 @@ class StylePreferences(BaseModel):
 # --------------------------------------------------------------------------- daily casual fit + notifications
 
 
+TIME_PATTERN = r"^([01]\d|2[0-3]):[0-5]\d$"
+
+
 class DailySettings(BaseModel):
-    enabled: bool = False  # send a notification every morning
-    time: str = Field(default="08:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")  # Europe/Dublin
+    enabled: bool = False  # morning notification: today's outfit
+    time: str = Field(default="08:00", pattern=TIME_PATTERN)  # Europe/Dublin
     location: Optional[str] = Field(default=None, max_length=80)  # None = the default city
+    evening_enabled: bool = False  # night-before notification: tomorrow's outfit + weather
+    evening_time: str = Field(default="20:00", pattern=TIME_PATTERN)
 
     _unk = field_validator("location", mode="before")(none_if_unknown)
 
@@ -440,10 +446,24 @@ class DailySettingsOut(DailySettings):
     push_configured: bool
     subscriptions: int
     last_sent_date: Optional[str]
+    evening_last_sent: Optional[str]
+    calendar_connected: bool
+
+
+class DayEventOut(BaseModel):
+    """A calendar event as shown to its owner. Titles are never stored or sent to the AI."""
+    title: str
+    start: str
+    end: str
+    all_day: bool
+    location: Optional[str]
+    occasion: Optional[str]  # None = says nothing about clothes (e.g. "Dentist")
 
 
 class DailyResponse(BaseModel):
+    day: str  # YYYY-MM-DD (Dublin)
     outfit: OutfitOut
+    events: list[DayEventOut]
     settings: DailySettingsOut
 
 

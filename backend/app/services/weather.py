@@ -179,6 +179,7 @@ def forecast_for(destination: str | None, when: datetime, hours: float = 1) -> t
     probs = [hourly["precipitation_probability"][k] for k in window if hourly["precipitation_probability"][k] is not None]
     rain = [hourly["precipitation"][k] for k in window if hourly["precipitation"][k] is not None]
     prob_max = max(probs) if probs else rain_prob
+    wet_hours = [k for k in window if is_wet(hourly["precipitation_probability"][k], hourly["precipitation"][k])]
     weather = WeatherOut(
         location_name=label,
         time=times[i].isoformat(),
@@ -194,6 +195,7 @@ def forecast_for(destination: str | None, when: datetime, hours: float = 1) -> t
         temperature_min_c=round(float(min(temps)), 1) if temps else round(float(temp), 1),
         temperature_max_c=round(float(max(temps)), 1) if temps else round(float(temp), 1),
         precipitation_probability_max=prob_max,
+        rain_from=times[wet_hours[0]].strftime("%H:%M") if wet_hours else None,
     )
     return weather, notices
 
@@ -215,4 +217,5 @@ def _weather_from(values: dict[str, Any], label: str, when: datetime, hours: flo
         temperature_min_c=values["temperature_c"],
         temperature_max_c=values["temperature_c"],
         precipitation_probability_max=values["precipitation_probability"],
+        rain_from=when.strftime("%H:%M") if is_wet(values["precipitation_probability"], values["precipitation_mm"]) else None,
     )

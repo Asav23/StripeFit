@@ -18,7 +18,8 @@ OCCASION_KEYWORDS: list[tuple[str, list[str]]] = [  # first match wins, so speci
     ("festival", ["festival", "electric picnic", "longitude", "forbidden fruit"]),
     ("match", ["watching the match", "watch the match", "at the match", "to the match", "watching the game",
                "croke park", "aviva", "stadium", "match day"]),
-    ("sport", ["football", "soccer", "training", "gym", "running", "run", "match", "rugby", "gaa", "hurling",
+    ("sport", ["football", "five-a-side", "five a side", "5-a-side", "5 a side", "futsal", "soccer", "training",
+               "gym", "running", "run", "match", "rugby", "gaa", "hurling",
                "camogie", "tennis", "basketball", "swim", "swimming", "yoga", "hike", "hiking", "5k", "parkrun"]),
     ("travel", ["flight", "flying", "airport", "travel", "travelling", "traveling", "road trip", "ferry"]),
     ("society", ["society", "societies", "soc event"]),
@@ -143,6 +144,12 @@ def _duration(text: str) -> float | None:
     if "all night" in text:
         return ALL_NIGHT_HOURS
     return None
+
+
+def classify_occasion(text: str) -> str | None:
+    """Occasion for a calendar event title/location, or None if it says nothing about clothes ("Dentist")."""
+    occasion = _first_match(text.lower(), OCCASION_KEYWORDS, "other")
+    return None if occasion == "other" else occasion
 
 
 def parse_request_rules(request_text: str, now: datetime) -> ParsedRequest:

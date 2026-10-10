@@ -1,4 +1,4 @@
-"""A tiny in-process scheduler: once a minute, send the morning casual-fit notification if it's due.
+"""A tiny in-process scheduler: once a minute, send the night-before and morning outfit notifications if due.
 
 Good enough for a local single-user prototype: the API is the only process, and daily.run_if_due()
 records the date it last sent, so restarts never send twice. A deployed version would use a real
@@ -40,7 +40,8 @@ def _loop() -> None:
     while not _stop.is_set():
         try:
             with Session(db.engine) as session:
-                daily.run_if_due(session)
+                daily.run_evening_if_due(session)  # tomorrow's outfit, the night before
+                daily.run_if_due(session)  # today's outfit, in the morning
         except Exception:  # noqa: BLE001 - the scheduler must keep running whatever happens
             log.exception("Daily fit check failed")
         _stop.wait(CHECK_EVERY_SECONDS)

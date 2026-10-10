@@ -156,6 +156,39 @@ VERY_COLD_C, VERY_COLD_MIN_OUTER_WARMTH = 5, 4
 HOT_C, HOT_MAX_WARMTH = 20, 3  # above HOT_C, drop outerwear/tops with warmth > 3
 OUTERWEAR_NEEDED_BELOW_C = 15
 
+# ---- laundry: wears before an item needs washing (None = wearing never sends it to the wash)
+WEARS_BEFORE_WASH: dict[str, Optional[int]] = {
+    "top": 1, "sportswear": 1, "one_piece": 1, "bottom": 3, "outerwear": None, "shoes": None, "accessory": None,
+}
+LOW_CLEAN_TOPS = 2  # warn when fewer clean tops than this are left after the planned day
+LOW_CLEAN_BOTTOMS = 1
+LAUNDRY_PILE_WARNING = 6  # this many items waiting for the wash -> suggest a wash
+
+# ---- day plans (calendar): the outfit is dressed for the most demanding event; others get a packing tip
+PACK_TIPS: dict[str, str] = {
+    "sport": "your sports kit and trainers", "night_out": "a going-out top", "date": "a smarter top",
+    "festival": "a waterproof and a warm layer", "match": "a warm layer", "wedding": "your wedding outfit",
+    "debs": "your debs outfit", "interview": "your interview outfit", "funeral": "something dark and smart",
+}
+DAY_START_HOUR = 9  # with no timed events, the day runs 9am to 7pm
+DAY_HOURS = 10
+EARLIEST_DAY_START_HOUR = 7
+
+
+def wears_before_wash(category: str) -> Optional[int]:
+    return WEARS_BEFORE_WASH.get(category, 1)
+
+
+def demand(occasion: str) -> tuple[int, int]:
+    """How dressy an occasion is: the event with the highest (min, max) formality sets the day's outfit."""
+    return OCCASION_FORMALITY.get(occasion, OCCASION_FORMALITY["other"])
+
+
+def ranges_overlap(a: str, b: str) -> bool:
+    (a_low, a_high), (b_low, b_high) = demand(a), demand(b)
+    return a_low <= b_high and b_low <= a_high and (a == "sport") == (b == "sport")
+
+
 # ---- slots
 SLOTS = ["top", "bottom", "one_piece", "outerwear", "shoes", "accessory"]
 SPORTSWEAR_BOTTOM_WORDS = ("short", "legging", "jogger", "track pant", "tracksuit bottom", "tights", "skort")

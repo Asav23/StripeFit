@@ -3,7 +3,7 @@
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, col, select
 
 from app.ai import mocks
@@ -11,7 +11,7 @@ from app.config import settings
 from app.db import get_session
 from app.errors import api_error
 from app.models import AICall, IngestLog
-from app.services import weather
+from app.services import google_calendar, weather
 from app.services.limits import get_user
 
 def _demo_controls_on() -> None:
@@ -94,3 +94,26 @@ def set_weather_override(body: WeatherOverride) -> dict[str, Any]:
         raise api_error(422, "unknown_preset", f"Use one of: {', '.join(weather.DEMO_WEATHER)}.")
     weather.OVERRIDE = weather.DEMO_WEATHER[body.preset] if body.preset else None
     return {"preset": body.preset}
+
+
+class DemoEvent(BaseModel):
+    title: str = Field(min_length=1, max_length=80)
+    start: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")  # HH:MM, applied to whichever day is planned
+    end: Optional[str] = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    location: Optional[str] = Field(default=None, max_length=80)
+
+
+class DemoCalendar(BaseModel):
+    events: Optional[list[DemoEvent]] = Field(default=None, max_length=10)  # None = use the real calendar
+
+
+@router.get("/demo-calendar")
+def get_demo_calendar() -> dict[str, Any]:
+    return {"events": google_calendar.DEMO_EVENTS}
+
+
+@router.post("/demo-calendar")
+def set_demo_calendar(body: DemoCalendar) -> dict[str, Any]:
+    """Pretend these events are on the calendar (any day), so the day planner can be shown without Google."""
+    google_calendar.DEMO_EVENTS = [e.model_dump() for e in body.events] if body.events is not None else None
+    return {"events": google_calendar.DEMO_EVENTS}

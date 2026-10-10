@@ -97,6 +97,9 @@ Rules, in priority order (an earlier rule always wins):
    Their past liked outfits show what they like; don't just repeat one.
 4. Otherwise prefer items not worn recently (higher days_since_worn).
 - Weather "temperature_min_c" is the coldest hour of the whole event: dress for it, not just the start.
+  "rain_from" is when rain is expected to start.
+- If request.day_events lists several events, dress for request.occasion (the most demanding one); the
+  explanation may say what to pack for the others.
 - explanation: max 60 words, friendly, mentions the occasion and the weather (or that there's no forecast),
   and one reason from the style guide or their taste. Don't mention ids."""
 

@@ -9,7 +9,7 @@ from app.db import get_session
 from app.errors import api_error, not_found
 from app.models import Item, utcnow
 from app.schemas import IdList, ItemCreate, ItemOut, ItemUpdate, StatusUpdate
-from app.services import images
+from app.services import images, laundry
 from app.services.limits import ensure_capacity
 from app.services.serialize import item_out
 
@@ -95,6 +95,8 @@ def set_status(item_id: int, body: StatusUpdate, session: Session = Depends(get_
     item.status = body.status
     if body.status == "worn":
         item.last_worn = utcnow()
+    if body.status == "in_wash":
+        laundry.mark_washed(item)
     session.add(item)
     session.commit()
     session.refresh(item)
@@ -105,6 +107,8 @@ def _move_status(session: Session, from_status: str, to_status: str) -> int:
     items = session.exec(select(Item).where(Item.confirmed == True, Item.status == from_status)).all()  # noqa: E712
     for item in items:
         item.status = to_status
+        if to_status == "in_wash":
+            laundry.mark_washed(item)
         session.add(item)
     session.commit()
     return len(items)

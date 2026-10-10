@@ -12,6 +12,8 @@ UPLOAD_DIR = BACKEND_DIR / "uploads"
 DB_PATH = BACKEND_DIR / "stripefit.db"
 GMAIL_TOKEN_PATH = BACKEND_DIR / ".gmail_token.json"
 GMAIL_PENDING_PATH = BACKEND_DIR / ".gmail_oauth_pending.json"  # in-flight sign-ins (PKCE), survives reloads
+CALENDAR_TOKEN_PATH = BACKEND_DIR / ".calendar_token.json"  # separate from Gmail: its own read-only scope
+CALENDAR_PENDING_PATH = BACKEND_DIR / ".calendar_oauth_pending.json"
 MOCKS_DIR = Path(__file__).resolve().parent / "ai" / "mocks"
 
 
@@ -45,6 +47,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/gmail/callback"
+    GOOGLE_CALENDAR_REDIRECT_URI: str = "http://localhost:8000/api/calendar/callback"
 
     # Defaults
     DEFAULT_LOCATION_NAME: str = "Dublin"

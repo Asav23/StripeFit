@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from app.ai.client import AIError
 from app.config import UPLOAD_DIR, settings
 from app.db import init_db
-from app.routers import daily, debug, gmail, ingest, items, me, outfits, push, review, stripe, style
+from app.routers import daily, debug, gmail, google_calendar, ingest, items, me, outfits, push, review, stripe, style
 from app.services import scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -78,7 +78,7 @@ def health() -> dict[str, bool]:
     return {"ok": True, "mock_ai": settings.USE_MOCK_AI}
 
 
-for module in (items, me, review, ingest, outfits, daily, style, push, stripe, gmail, debug):
+for module in (items, me, review, ingest, outfits, daily, google_calendar, style, push, stripe, gmail, debug):
     app.include_router(module.router)
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

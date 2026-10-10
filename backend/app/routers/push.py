@@ -39,12 +39,12 @@ def unsubscribe(body: PushUnsubscribeIn, session: Session = Depends(get_session)
 
 @router.post("/test")
 def send_test(session: Session = Depends(get_session)) -> dict[str, int]:
-    """Send today's casual fit to every subscribed browser right now."""
+    """Send tomorrow's outfit (the night-before notification) to every subscribed browser right now."""
     _require_configured()
     if push.count(session) == 0:
         raise api_error(409, "no_subscriptions", "No browser is subscribed to notifications yet.",
-                        "Turn on the morning notification first.")
-    sent, removed = daily.notify(session)
+                        "Turn on outfit notifications first.")
+    sent, removed = daily.notify(session, daily.resolve_day("tomorrow"), daily.EVENING_TITLE)
     if sent == 0:
         raise api_error(502, "push_failed", "The notification couldn't be delivered.",
                         "Turn notifications off and on again in this browser.")

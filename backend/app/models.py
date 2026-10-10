@@ -56,6 +56,7 @@ class Item(SQLModel, table=True):
     currency: Optional[str] = None
 
     last_worn: Optional[datetime] = None
+    wears_since_wash: int = 0  # jeans and jackets get several wears; see rules.WEARS_BEFORE_WASH
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -91,6 +92,9 @@ class User(SQLModel, table=True):
     daily_time: str = "08:00"  # Europe/Dublin
     daily_location: Optional[str] = None  # None = default city
     daily_last_sent: Optional[str] = None  # Dublin date of the last morning notification
+    evening_enabled: bool = False  # the night-before notification ("what to wear tomorrow")
+    evening_time: str = "20:00"
+    evening_last_sent: Optional[str] = None  # Dublin date of the evening it was last sent
 
 
 class StyleSignal(SQLModel, table=True):

@@ -81,6 +81,15 @@ Step 3 is optional: checkout also works without `STRIPE_PRICE_ID` (inline price)
 4. In `backend/.env` set `GOOGLE_CLIENT_ID=...` and `GOOGLE_CLIENT_SECRET=...`.
 5. In the app, go to **Add → Gmail → Connect Gmail** and approve the consent screen (read-only).
 
+### 3b. Google Calendar (optional): tomorrow's outfit planned around your day
+Uses the same Google Cloud project and OAuth client as Gmail.
+1. Enable the **Google Calendar API** in that project.
+2. Add the scope `.../auth/calendar.events.readonly` to the OAuth consent screen.
+3. Add the redirect URI `http://localhost:8000/api/calendar/callback` to the OAuth client.
+4. Restart the API and open the link from `GET /api/calendar/auth-url`.
+
+Until then, `POST /api/debug/demo-calendar` fakes tomorrow's events. See `HANDOFF.md` for the night-before notification.
+
 ### 4. Real clothes
 Upload photos of your own clothes on **Add → Photos**. The seed data covers you until then.
 
@@ -124,6 +133,6 @@ Chosen from the OpenRouter catalogue (`python scripts/list_models.py`). Each tas
 Change them in `backend/.env` (never hard-coded).
 
 ## API overview
-`GET /api/health` · `GET /api/me` · `GET/POST/PATCH/DELETE /api/items` · `POST /api/items/{id}/status` · `POST /api/items/wash-worn` · `POST /api/items/laundry-done` · `POST /api/items/bulk-delete` · `POST /api/ingest/photo` · `POST /api/ingest/email|samples` (starts a background job) · `GET /api/ingest/jobs/{id}` (progress + summary) · `GET /api/review` · `POST /api/review/{id}/confirm|reject` · `POST /api/outfits/plan` · `GET /api/outfits` · `POST /api/outfits/{id}/swap|wear|feedback` · `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `GET /api/stripe/session/{id}` · `GET /api/gmail/status|auth-url|callback` · `POST /api/gmail/import|disconnect` · `GET /api/debug/ai-calls` · `GET /api/daily` · `POST /api/daily/another` · `GET/PUT /api/daily/settings` · `GET /api/push/config` · `POST /api/push/subscribe|unsubscribe|test` · `GET /api/style/profile` · `PUT /api/style/preferences`
+`GET /api/health` · `GET /api/me` · `GET/POST/PATCH/DELETE /api/items` · `POST /api/items/{id}/status` · `POST /api/items/wash-worn` · `POST /api/items/laundry-done` · `POST /api/items/bulk-delete` · `POST /api/ingest/photo` · `POST /api/ingest/email|samples` (starts a background job) · `GET /api/ingest/jobs/{id}` (progress + summary) · `GET /api/review` · `POST /api/review/{id}/confirm|reject` · `POST /api/outfits/plan` · `GET /api/outfits` · `POST /api/outfits/{id}/swap|wear|feedback` · `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `GET /api/stripe/session/{id}` · `GET /api/gmail/status|auth-url|callback` · `POST /api/gmail/import|disconnect` · `GET /api/debug/ai-calls` · `GET /api/daily?day=today|tomorrow` · `POST /api/daily/another` · `GET /api/calendar/status|auth-url|callback|events` · `POST /api/calendar/disconnect` · `GET/PUT /api/daily/settings` · `GET /api/push/config` · `POST /api/push/subscribe|unsubscribe|test` · `GET /api/style/profile` · `PUT /api/style/preferences`
 
 Interactive docs: <http://localhost:8000/docs>
