@@ -2,6 +2,12 @@
 .env
 backend/.env
 backend/.gmail_token.json
+backend/.gmail_oauth_pending.json
+backend/.calendar_token.json
+backend/.calendar_oauth_pending.json
+.calendar_token.json
+.calendar_oauth_pending.json
+.gmail_oauth_pending.json
 .gmail_token.json
 
 # Python
@@ -22,3 +28,6 @@ frontend/dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Style dataset exports (may contain personal data)
+backend/exports/

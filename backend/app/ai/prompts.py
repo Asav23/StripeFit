@@ -41,9 +41,12 @@ PARSE_SYSTEM = """You turn a student's note about where they are going into stru
 Reply with ONE JSON object only.
 
 Shape:
-{"occasion": "uni"|"casual"|"night_out"|"date"|"interview"|"work"|"wedding"|"funeral"|"sport"|"other",
+{"occasion": "uni"|"casual"|"night_out"|"date"|"interview"|"work"|"wedding"|"funeral"|"sport"|"debs"|"society"
+             |"match"|"festival"|"travel"|"presentation"|"other",
  "occasion_detail": str or null, "destination": str or null, "datetime_iso": str,
  "travel_mode": "walk"|"cycle"|"bus"|"train"|"car"|"unknown", "dress_code": str or null,
+ "setting": "indoor"|"outdoor"|"mixed"|"unknown", "duration_hours": number or null,
+ "activity": "sitting"|"standing"|"dancing"|"walking"|"active"|"unknown",
  "needs_clarification": str or null}
 
 Rules:
@@ -53,7 +56,12 @@ Rules:
   "tonight", "Saturday" relative to the current time given below. If no time is given, pick the next
   sensible time today (e.g. "night out" -> 21:00, "training" -> 19:00, "uni" -> 09:00 tomorrow if it
   is already evening) and never a time in the past.
-- occasion: football/gym/running/training -> sport; lectures/college/campus -> uni; job interview -> interview.
+- occasion: football/gym/running/training (playing) -> sport; watching a match at a stadium -> match;
+  lectures/college/campus -> uni; job interview -> interview; debs/ball/formal -> debs; club or society
+  event -> society; festival -> festival; flight/long journey -> travel; giving a talk or presentation ->
+  presentation; coffee/shopping/an ordinary day -> casual.
+- setting, duration_hours, activity: only if the note says or clearly implies it (e.g. "festival" ->
+  outdoor, "clubbing" -> dancing, "all day" -> 10). Otherwise "unknown" / null. Do not guess.
 - needs_clarification: ONLY when the note is empty or meaningless (e.g. "asdf", "?"). Then it is a short
   friendly question. Otherwise null."""
 
@@ -75,24 +83,40 @@ Shape:
 {"top_id": int|null, "bottom_id": int|null, "one_piece_id": int|null, "outerwear_id": int|null,
  "shoes_id": int|null, "accessory_ids": [int], "explanation": str, "confidence": 0-1}
 
-Rules:
+Rules, in priority order (an earlier rule always wins):
+1. Hard rules:
 - Use ONLY ids from the candidate list, each in its own slot (the "slot" field). Never invent ids.
 - Either one_piece_id, or top_id + bottom_id. Never both.
 - Pick shoes if any shoe candidates exist.
 - Respect the requirements block (e.g. if outerwear is required, pick one of the outerwear candidates).
 - Outerwear only if the weather or the occasion needs it. Accessories are optional (0-2).
-- Choose colours that work together; prefer items not worn recently (higher days_since_worn).
-- explanation: max 60 words, friendly, mentions the occasion and the weather (or that there's no forecast)."""
+2. The style guide for this occasion ("style_guide"): follow "expect", never pick what "avoid" describes,
+   use "combos" as patterns and obey the colour rules.
+3. The user's taste ("user_taste", if present): prefer their favourite colours and loved items, steer away
+   from colours they avoid and items they keep rejecting, and lean the way they dress for this occasion.
+   Their past liked outfits show what they like; don't just repeat one.
+4. Otherwise prefer items not worn recently (higher days_since_worn).
+- Weather "temperature_min_c" is the coldest hour of the whole event: dress for it, not just the start.
+  "rain_from" is when rain is expected to start.
+- If request.day_events lists several events, dress for request.occasion (the most demanding one); the
+  explanation may say what to pack for the others.
+- explanation: max 60 words, friendly, mentions the occasion and the weather (or that there's no forecast),
+  and one reason from the style guide or their taste. Don't mention ids."""
 
 
 def pick_messages(parsed: dict[str, Any], weather: dict[str, Any] | None,
-                  candidates: list[dict[str, Any]], requirements: dict[str, Any]) -> list[dict[str, Any]]:
-    payload = {
+                  candidates: list[dict[str, Any]], requirements: dict[str, Any],
+                  style_guide: dict[str, Any] | None = None, user_taste: dict[str, Any] | None = None,
+                  ) -> list[dict[str, Any]]:
+    payload: dict[str, Any] = {
         "request": parsed,
         "weather": weather or "no forecast available",
         "requirements": requirements,
+        "style_guide": style_guide,
         "candidates": candidates,
     }
+    if user_taste:
+        payload["user_taste"] = user_taste
     return [
         {"role": "system", "content": PICK_SYSTEM},
         {"role": "user", "content": json.dumps(payload, default=str)},

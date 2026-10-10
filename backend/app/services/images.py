@@ -14,6 +14,16 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps, UnidentifiedImageError
 from app.config import UPLOAD_DIR
 
 ALLOWED_PHOTO_FORMATS = {"JPEG", "PNG", "WEBP", "MPO"}  # MPO = some phone JPEGs
+
+# iPhone originals are HEIC. pillow-heif teaches Pillow to read them; it is optional, so the app
+# still runs (and rejects HEIC with a friendly message) where it isn't installed or can't load.
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    ALLOWED_PHOTO_FORMATS.add("HEIF")
+except ImportError:
+    pass
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 MAX_DOWNLOAD_BYTES = 5 * 1024 * 1024
 ORIGINAL_MAX_PX = 2048
@@ -34,10 +44,14 @@ def open_photo(data: bytes) -> Image.Image:
         img = Image.open(io.BytesIO(data))
         img.load()
     except (UnidentifiedImageError, OSError):
-        raise ImageRejected("That file isn't a photo we can read. Use a JPEG, PNG or WebP image.")
+        raise ImageRejected(f"That file isn't a photo we can read. Use a {_formats_hint()} image.")
     if img.format not in ALLOWED_PHOTO_FORMATS:
-        raise ImageRejected(f"{img.format or 'This'} images aren't supported. Use a JPEG, PNG or WebP image.")
+        raise ImageRejected(f"{img.format or 'This'} images aren't supported. Use a {_formats_hint()} image.")
     return ImageOps.exif_transpose(img).convert("RGB")
+
+
+def _formats_hint() -> str:
+    return "JPEG, PNG, WebP or HEIC" if "HEIF" in ALLOWED_PHOTO_FORMATS else "JPEG, PNG or WebP"
 
 
 def save_photo(img: Image.Image) -> tuple[str, str, str]:

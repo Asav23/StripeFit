@@ -259,7 +259,7 @@ def summarise(results: list[FileIngestResult]) -> IngestSummary:
                          summary=" · ".join(parts))
 
 
-def _sort_key(doc: EmailDoc) -> tuple[datetime, str]:
+def sort_key(doc: EmailDoc) -> tuple[datetime, str]:
     # Oldest first, so an order is always processed before its dispatch/refund emails.
     return doc.date.astimezone(timezone.utc) if doc.date else datetime.max.replace(tzinfo=timezone.utc), doc.ref
 
@@ -272,6 +272,6 @@ def ingest_files(session: Session, uploads: list[tuple[str, bytes]]) -> IngestSu
             docs.append(read_upload(filename, data))
         except UnsupportedFile as exc:
             results.append(FileIngestResult(filename=filename, notes=[f"unsupported file: {exc}"]))
-    for doc in sorted(docs, key=_sort_key):
+    for doc in sorted(docs, key=sort_key):
         results.append(ingest_doc(session, doc))
     return summarise(results)

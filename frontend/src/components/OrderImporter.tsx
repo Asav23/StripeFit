@@ -1,31 +1,60 @@
 import { FileText, ShieldCheck } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import type { IngestSummary } from "../api/types";
+import type { EmailJob } from "../api/types";
 import { useMe, useToast } from "../context";
 import IngestResults from "./IngestResults";
-import { Button, Skeleton, Spinner } from "./ui";
+import { Button, Notice, Spinner } from "./ui";
 
 const ACCEPT = ".eml,.html,.htm,.txt,.pdf,.png,.jpg,.jpeg,.webp";
+const POLL_MS = 1000;
 
 export default function OrderImporter() {
   const { refresh } = useMe();
   const { showError } = useToast();
   const [dragging, setDragging] = useState(false);
-  const [working, setWorking] = useState(false);
-  const [summary, setSummary] = useState<IngestSummary | null>(null);
+  const [job, setJob] = useState<EmailJob | null>(null);
+  const [starting, setStarting] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const poller = useRef<number | null>(null);
+  const working = starting || !!job?.running;
 
-  const run = async (task: () => Promise<IngestSummary>) => {
-    setWorking(true);
-    setSummary(null);
+  const stopPolling = () => {
+    if (poller.current) window.clearInterval(poller.current);
+    poller.current = null;
+  };
+  useEffect(() => stopPolling, []);
+
+  // The server reads the emails in the background (real AI can take a minute); we poll for progress.
+  const poll = (id: string) => {
+    stopPolling();
+    poller.current = window.setInterval(async () => {
+      try {
+        const next = await api.ingestJob(id);
+        setJob(next);
+        if (!next.running) {
+          stopPolling();
+          void refresh();
+        }
+      } catch (e) {
+        stopPolling();
+        setJob(null);
+        showError(e);
+      }
+    }, POLL_MS);
+  };
+
+  const run = async (task: () => Promise<EmailJob>) => {
+    setStarting(true);
+    setJob(null);
     try {
-      setSummary(await task());
-      void refresh();
+      const started = await task();
+      setJob(started);
+      poll(started.id);
     } catch (e) {
       showError(e);
     } finally {
-      setWorking(false);
+      setStarting(false);
     }
   };
 
@@ -78,13 +107,21 @@ export default function OrderImporter() {
           Try it with 18 sample order emails
         </Button>
 
-        {working && (
-          <div className="space-y-2">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-40" />
+        {job?.running && (
+          <div className="space-y-1.5" aria-live="polite">
+            <div className="h-1 overflow-hidden rounded-full bg-line">
+              <div
+                className="h-full bg-ink transition-all duration-500"
+                style={{ width: `${job.total ? Math.round((job.done / job.total) * 100) : 0}%` }}
+              />
+            </div>
+            <p className="font-mono text-[11px] text-muted">
+              {job.done} / {job.total} files read
+            </p>
           </div>
         )}
-        {summary && <IngestResults summary={summary} />}
+        {job?.error && <Notice tone="error">{job.error}</Notice>}
+        {job && !job.running && job.summary && <IngestResults summary={job.summary} />}
       </div>
 
       <aside className="h-fit rounded-xl border border-line bg-card/70 p-4 text-[13px] leading-relaxed text-ink-2">

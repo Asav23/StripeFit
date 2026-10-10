@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import type { DemoEvent } from "../api/types";
 import { useToast } from "../context";
 import { Choice } from "./ui";
 
@@ -10,14 +11,44 @@ const WEATHER_PRESETS: { value: string | null; label: string }[] = [
   { value: "hot", label: "Hot, 25°C" },
 ];
 
+const CALENDAR_PRESETS: { key: string; label: string; events: DemoEvent[] | null }[] = [
+  { key: "real", label: "Real calendar", events: null },
+  {
+    key: "interview",
+    label: "Interview + football",
+    events: [
+      { title: "Interview at Accenture", start: "10:00", end: "11:00", location: "Grand Canal Dock" },
+      { title: "Five-a-side", start: "19:00", end: "20:00", location: "Belfield" },
+    ],
+  },
+  {
+    key: "uni",
+    label: "Lectures + night out",
+    events: [
+      { title: "COMP30010 lecture", start: "09:00", end: "13:00", location: "UCD" },
+      { title: "Night out in town", start: "21:00", end: "23:59", location: "Temple Bar" },
+    ],
+  },
+  { key: "wedding", label: "Wedding", events: [{ title: "Cousin's wedding", start: "13:00", end: "23:00", location: "Kilkenny" }] },
+  { key: "free", label: "Nothing on", events: [] },
+];
+
 /** Switches for showing the rules and fallbacks live, whatever today's weather or AI is doing. */
 export default function DemoControls({ mockAi }: { mockAi: boolean }) {
   const { notify, showError } = useToast();
   const [weather, setWeather] = useState<string | null>(null);
   const [invalidPick, setInvalidPick] = useState(false);
+  const [calendarPreset, setCalendarPreset] = useState("real");
 
   useEffect(() => {
     api.weatherOverride().then((w) => setWeather(w.preset)).catch(() => undefined);
+    api
+      .demoCalendar()
+      .then((c) => {
+        const match = CALENDAR_PRESETS.find((p) => JSON.stringify(p.events) === JSON.stringify(c.events));
+        setCalendarPreset(match ? match.key : c.events ? "custom" : "real");
+      })
+      .catch(() => undefined);
     if (mockAi) api.mockOverrides().then((m) => setInvalidPick(m.overrides.pick_outfit === "invalid")).catch(() => undefined);
   }, [mockAi]);
 
@@ -26,6 +57,17 @@ export default function DemoControls({ mockAi }: { mockAi: boolean }) {
       await api.setWeatherOverride(preset);
       setWeather(preset);
       notify(preset ? `Demo weather: ${preset}. Plan an outfit to see the rules.` : "Using the real forecast again.", "info");
+    } catch (e) {
+      showError(e);
+    }
+  };
+
+  const chooseCalendar = async (key: string) => {
+    const preset = CALENDAR_PRESETS.find((p) => p.key === key)!;
+    try {
+      await api.setDemoCalendar(preset.events);
+      setCalendarPreset(key);
+      notify(preset.events ? `Demo calendar: ${preset.label.toLowerCase()} (any day). See the Today tab.` : "Using your real calendar again.", "info");
     } catch (e) {
       showError(e);
     }
@@ -48,6 +90,16 @@ export default function DemoControls({ mockAi }: { mockAi: boolean }) {
         <div className="flex flex-wrap gap-1.5">
           {WEATHER_PRESETS.map((p) => (
             <Choice key={p.label} active={weather === p.value} onClick={() => chooseWeather(p.value)}>
+              {p.label}
+            </Choice>
+          ))}
+        </div>
+      </div>
+      <div className="border-t border-line pt-4">
+        <p className="mb-2 text-[13px] font-medium">Calendar used by the Today tab</p>
+        <div className="flex flex-wrap gap-1.5">
+          {CALENDAR_PRESETS.map((p) => (
+            <Choice key={p.key} active={calendarPreset === p.key} onClick={() => chooseCalendar(p.key)}>
               {p.label}
             </Choice>
           ))}

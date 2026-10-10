@@ -7,7 +7,7 @@ we use a deterministic rule-based pick instead.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from sqlmodel import Session, col, select
 
@@ -17,7 +17,7 @@ from app.config import settings
 from app.errors import api_error
 from app.models import Item, Outfit, as_utc, utcnow
 from app.schemas import OutfitOut, OutfitPick, OutfitSlotOut, ParsedRequest, PlanResponse, WeatherOut
-from app.services import rules, weather as weather_service
+from app.services import laundry, rules, style_profile, weather as weather_service
 from app.services.request_rules import parse_request_rules
 from app.services.serialize import item_out
 
@@ -74,25 +74,29 @@ def candidate_dicts(candidates: dict[str, list[Item]]) -> list[dict[str, Any]]:
     ]
 
 
-def _rank(options: list[dict[str, Any]], requirements: dict[str, Any]) -> list[dict[str, Any]]:
-    """Formality closest to the occasion midpoint first, then suits the temperature, then least recently worn."""
+def _rank(options: list[dict[str, Any]], requirements: dict[str, Any],
+          profile: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
+    """Best first: formality close to the occasion midpoint, adjusted by the user's taste (favourite items and
+    colours, occasion colours to tone down), then suits the temperature, then least recently worn."""
     low, high = requirements["formality_range"]
     midpoint = (low + high) / 2
     prefer = requirements.get("prefer_warmth")
 
     def key(c: dict[str, Any]) -> tuple[float, int, int]:
         distance = abs(c["formality"] - midpoint) if c["formality"] is not None else UNKNOWN_FORMALITY_DISTANCE
+        taste = style_profile.preference_score(c, profile, requirements)
         warmth = c["warmth"] if c["warmth"] is not None else 3
         warmth_penalty = warmth if prefer == "cooler" else -warmth if prefer == "warmer" else 0
         days = c["days_since_worn"] if c["days_since_worn"] is not None else NEVER_WORN_DAYS
-        return distance, warmth_penalty, -days
+        return distance - style_profile.PREFERENCE_WEIGHT * taste, warmth_penalty, -days
 
     return sorted(options, key=key)
 
 
-def rule_based_pick(candidates: list[dict[str, Any]], parsed: dict[str, Any], requirements: dict[str, Any]) -> dict[str, Any]:
+def rule_based_pick(candidates: list[dict[str, Any]], parsed: dict[str, Any], requirements: dict[str, Any],
+                    profile: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     """Deterministic pick per slot. Returns OutfitPick-shaped dict (without explanation)."""
-    by_slot = {s: _rank([c for c in candidates if c["slot"] == s], requirements) for s in rules.SLOTS}
+    by_slot = {s: _rank([c for c in candidates if c["slot"] == s], requirements, profile) for s in rules.SLOTS}
     pick: dict[str, Any] = {f: None for f in PICK_FIELDS.values()}
     if by_slot["top"] and by_slot["bottom"]:
         pick["top_id"], pick["bottom_id"] = by_slot["top"][0]["id"], by_slot["bottom"][0]["id"]
@@ -139,11 +143,14 @@ def validate_pick(pick: OutfitPick, candidates: list[dict[str, Any]], requiremen
 
 
 def ai_pick(parsed: dict[str, Any], weather: Optional[dict[str, Any]], candidates: list[dict[str, Any]],
-            requirements: dict[str, Any]) -> tuple[OutfitPick, bool]:
+            requirements: dict[str, Any], profile: Optional[dict[str, Any]] = None) -> tuple[OutfitPick, bool]:
     """Returns (pick, used_fallback)."""
     model, fallbacks = settings.models_for("stylist")
-    messages = prompts.pick_messages(parsed, weather, candidates, requirements)
-    mock_input = {"parsed": parsed, "weather": weather, "candidates": candidates, "requirements": requirements}
+    brief = rules.style_brief(parsed.get("occasion", "other"))
+    taste = style_profile.for_model(profile, {c["id"] for c in candidates}) if profile else None
+    messages = prompts.pick_messages(parsed, weather, candidates, requirements, brief, taste)
+    mock_input = {"parsed": parsed, "weather": weather, "candidates": candidates, "requirements": requirements,
+                  "profile": profile}
     for attempt in range(2):
         try:
             pick = call_json("pick_outfit", model, fallbacks, messages, OutfitPick, mock_input=mock_input, max_tokens=500)
@@ -158,7 +165,7 @@ def ai_pick(parsed: dict[str, Any], weather: Optional[dict[str, Any]], candidate
             {"role": "assistant", "content": pick.model_dump_json()},
             {"role": "user", "content": "That outfit breaks the rules: " + "; ".join(errors) + ". Fix it and reply with JSON only."},
         ]
-    fallback = OutfitPick(**rule_based_pick(candidates, parsed, requirements), explanation="")
+    fallback = OutfitPick(**rule_based_pick(candidates, parsed, requirements, profile), explanation="")
     return fallback, True
 
 
@@ -186,6 +193,19 @@ def _wardrobe(session: Session) -> list[Item]:
     return list(session.exec(select(Item).where(Item.confirmed == True)).all())  # noqa: E712
 
 
+def usable_wardrobe(session: Session) -> list[Item]:
+    """The confirmed wardrobe, or a friendly 409 if there's nothing to pick from."""
+    wardrobe = _wardrobe(session)
+    mine = [i for i in wardrobe if i.owner == "me" and i.status != "returned"]
+    if not mine:
+        raise api_error(409, "empty_wardrobe", "Your wardrobe is empty, so there's nothing to pick from yet.",
+                        "Add your first items on the Add tab.")
+    if not any(i.status == "available" for i in mine):
+        raise api_error(409, "nothing_available", "Everything you own is worn, in the wash or unavailable.",
+                        "Tap “Laundry done” on the Wardrobe tab when your clothes are clean.")
+    return wardrobe
+
+
 def plan_outfit(session: Session, request_text: str) -> PlanResponse:
     text = request_text.strip()
     if not text:
@@ -195,15 +215,7 @@ def plan_outfit(session: Session, request_text: str) -> PlanResponse:
         raise api_error(422, "request_too_long", f"That's a bit long. Keep it under {MAX_REQUEST_CHARS} characters.",
                         "Just say where, when and how you're getting there.")
 
-    wardrobe = _wardrobe(session)
-    mine = [i for i in wardrobe if i.owner == "me" and i.status != "returned"]
-    if not mine:
-        raise api_error(409, "empty_wardrobe", "Your wardrobe is empty, so there's nothing to pick from yet.",
-                        "Add your first items on the Add tab.")
-    if not any(i.status == "available" for i in mine):
-        raise api_error(409, "nothing_available", "Everything you own is worn, in the wash or unavailable.",
-                        "Tap “Laundry done” on the Wardrobe tab when your clothes are clean.")
-
+    wardrobe = usable_wardrobe(session)
     now = datetime.now(settings.tz)
     parsed, parse_fallback = parse_request(text, now)
     if parsed.needs_clarification:
@@ -212,14 +224,40 @@ def plan_outfit(session: Session, request_text: str) -> PlanResponse:
     notices: list[str] = []
     if parse_fallback:
         notices.append("The AI couldn't read your note, so we matched keywords instead. Check the occasion below.")
-    weather_obj, weather_notices = weather_service.forecast_for(parsed.destination, _when(parsed))
+    outfit = build_outfit(session, wardrobe, text, parsed, parse_fallback=parse_fallback, notices=notices)
+    return PlanResponse(outfit=outfit_out(session, outfit))
+
+
+def _without(candidates: dict[str, list[Item]], exclude_ids: set[int]) -> dict[str, list[Item]]:
+    """Drop excluded items, but never empty a slot (an outfit beats a perfect rotation)."""
+    out = {}
+    for slot, items in candidates.items():
+        kept = [i for i in items if i.id not in exclude_ids]
+        out[slot] = kept or items
+    return out
+
+
+def build_outfit(session: Session, wardrobe: list[Item], text: str, parsed: ParsedRequest, *,
+                 parse_fallback: bool = False, notices: Optional[list[str]] = None, kind: str = "plan",
+                 for_date: Optional[str] = None, exclude_ids: Iterable[int] = (), extra: Optional[dict[str, Any]] = None,
+                 weather_place: Optional[str] = None) -> Outfit:
+    """weather (whole event) -> rules -> user's taste -> AI pick -> validate -> save. Shared by plans and daily fits.
+
+    extra: more context for the model and the saved outfit (e.g. the day's calendar events, without titles).
+    weather_place: look up the weather here instead of parsed.destination (keeps calendar text away from the AI).
+    """
+    notices = list(notices or [])
+    parsed_dict = {**parsed.model_dump(), **(extra or {})}
+    weather_obj, weather_notices = weather_service.forecast_for(weather_place or parsed.destination, _when(parsed),
+                                                                rules.event_hours(parsed_dict))
     notices += weather_notices
     weather = weather_obj.model_dump() if weather_obj else None
-    parsed_dict = parsed.model_dump()
 
     filtered = rules.filter_candidates(wardrobe, parsed_dict, weather)
-    candidates = candidate_dicts(filtered.candidates)
-    pick, used_fallback = ai_pick(parsed_dict, weather, candidates, filtered.requirements)
+    pool = _without(filtered.candidates, set(exclude_ids)) if exclude_ids else filtered.candidates
+    candidates = candidate_dicts(pool)
+    profile = style_profile.build(session, parsed.occasion)
+    pick, used_fallback = ai_pick(parsed_dict, weather, candidates, filtered.requirements, profile)
 
     item_ids = {slot: getattr(pick, f) for slot, f in PICK_FIELDS.items()}
     item_ids["accessory"] = pick.accessory_ids
@@ -235,11 +273,13 @@ def plan_outfit(session: Session, request_text: str) -> PlanResponse:
         gaps=filtered.gaps,
         notices=notices,
         used_fallback=used_fallback,
+        kind=kind,
+        for_date=for_date,
     )
     session.add(outfit)
     session.commit()
     session.refresh(outfit)
-    return PlanResponse(outfit=outfit_out(session, outfit))
+    return outfit
 
 
 def _all_ids(item_ids: dict[str, Any]) -> list[int]:
@@ -250,8 +290,9 @@ def _all_ids(item_ids: dict[str, Any]) -> list[int]:
 def swap_slot(session: Session, outfit: Outfit, slot: str) -> Outfit:
     """Replace one slot with the next-best candidate (cycles through the options)."""
     filtered = rules.filter_candidates(_wardrobe(session), outfit.parsed, outfit.weather)
+    profile = style_profile.build(session, outfit.parsed.get("occasion", "other"))
     options = _rank([c for c in candidate_dicts(filtered.candidates) if c["slot"] == slot],
-                    {**filtered.requirements})
+                    {**filtered.requirements}, profile)
     current_value = outfit.item_ids.get(slot)
     current = (current_value[0] if current_value else None) if slot == "accessory" else current_value
     option_ids = [o["id"] for o in options]
@@ -268,6 +309,9 @@ def swap_slot(session: Session, outfit: Outfit, slot: str) -> Outfit:
     item_ids[slot] = [next_id] if slot == "accessory" else next_id
     outfit.item_ids = item_ids
     outfit.worn = False
+    occasion = outfit.parsed.get("occasion")
+    style_profile.record(session, "swap_out", [current], outfit_id=outfit.id, occasion=occasion)
+    style_profile.record(session, "swap_in", [next_id], outfit_id=outfit.id, occasion=occasion)
     session.add(outfit)
     session.commit()
     session.refresh(outfit)
@@ -275,12 +319,14 @@ def swap_slot(session: Session, outfit: Outfit, slot: str) -> Outfit:
 
 
 def wear_outfit(session: Session, outfit: Outfit) -> Outfit:
+    """Tops go to the wash pile after one wear; jeans after a few; coats and shoes never (rules.WEARS_BEFORE_WASH)."""
     now = utcnow()
     for item in session.exec(select(Item).where(col(Item.id).in_(_all_ids(outfit.item_ids)))).all():
-        item.status = "worn"
-        item.last_worn = now
+        laundry.record_wear(item, now)
         session.add(item)
     outfit.worn = True
+    style_profile.record(session, "worn", _all_ids(outfit.item_ids), outfit_id=outfit.id,
+                         occasion=outfit.parsed.get("occasion"))
     session.add(outfit)
     session.commit()
     session.refresh(outfit)
@@ -311,4 +357,15 @@ def outfit_out(session: Session, outfit: Outfit) -> OutfitOut:
         feedback=outfit.feedback,
         worn=outfit.worn,
         created_at=outfit.created_at,
+        kind=outfit.kind,
+        for_date=outfit.for_date,
     )
+
+
+def set_feedback(session: Session, outfit: Outfit, feedback: Optional[str]) -> Outfit:
+    outfit.feedback = feedback
+    style_profile.set_feedback(session, outfit, _all_ids(outfit.item_ids), feedback)
+    session.add(outfit)
+    session.commit()
+    session.refresh(outfit)
+    return outfit

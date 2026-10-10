@@ -1,10 +1,11 @@
-import { Activity, ClipboardCheck, Plus, Shirt, Sparkles, Star, type LucideIcon } from "lucide-react";
+import { Activity, CalendarCheck, ClipboardCheck, Plus, Shirt, Sparkles, Star, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useMe } from "../context";
 import { Notice } from "./ui";
 
 const TABS: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
   { to: "/", label: "Wardrobe", icon: Shirt, end: true },
+  { to: "/today", label: "Today", icon: CalendarCheck },
   { to: "/plan", label: "Plan", icon: Sparkles },
   { to: "/add", label: "Add", icon: Plus },
   { to: "/review", label: "Review", icon: ClipboardCheck },
@@ -125,19 +126,19 @@ export default function Layout() {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {TABS.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
-                `relative flex flex-col items-center gap-1 pb-2 pt-2.5 text-[10.5px] font-medium ${isActive ? "text-accent" : "text-muted"}`
+                `relative flex flex-col items-center gap-1 pb-2 pt-2.5 text-[10px] font-medium ${isActive ? "text-accent" : "text-muted"}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`absolute inset-x-6 top-0 h-[2px] rounded-full ${isActive ? "bg-accent" : ""}`} />
+                  <span className={`absolute inset-x-4 top-0 h-[2px] rounded-full ${isActive ? "bg-accent" : ""}`} />
                   <Icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2 : 1.6} />
                   {label}
                   {label === "Review" && <ReviewCount className="absolute right-[22%] top-1" />}

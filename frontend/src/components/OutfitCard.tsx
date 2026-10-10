@@ -64,11 +64,17 @@ export function WeatherBlock({ weather }: { weather: Weather }) {
       <div>
         <p className="display text-[32px] leading-none">{Math.round(weather.temperature_c)}°</p>
         <p className="mt-1 text-xs text-muted">{weather.description}</p>
+        {weather.temperature_min_c != null && weather.temperature_min_c <= weather.temperature_c - 2 && (
+          <p className="text-xs text-muted">Down to {Math.round(weather.temperature_min_c)}° later</p>
+        )}
       </div>
       <dl className="space-y-1 border-l border-line pl-4 font-mono text-[11px] text-ink-2">
         <div className={`flex items-center gap-1.5 ${weather.is_wet ? "text-info" : ""}`}>
           <Umbrella className="h-3 w-3" /> <dt className="sr-only">Rain chance</dt>
-          <dd>{weather.precipitation_probability ?? 0}%</dd>
+          <dd>
+            {weather.precipitation_probability_max ?? weather.precipitation_probability ?? 0}%
+            {weather.rain_from ? ` from ${weather.rain_from}` : ""}
+          </dd>
         </div>
         {weather.wind_kmh != null && (
           <div className="flex items-center gap-1.5">
@@ -119,9 +125,11 @@ export default function OutfitCard({ outfit, onChange }: { outfit: Outfit; onCha
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
             <span>{when(p.datetime_iso)}</span>
             {p.destination && <span>· {p.destination}</span>}
-            <span className="inline-flex items-center gap-1">
-              · <TravelIcon className="h-3.5 w-3.5" /> {travel.label}
-            </span>
+            {outfit.kind !== "daily" && (
+              <span className="inline-flex items-center gap-1">
+                · <TravelIcon className="h-3.5 w-3.5" /> {travel.label}
+              </span>
+            )}
             {p.dress_code && <span>· {p.dress_code}</span>}
           </p>
         </div>

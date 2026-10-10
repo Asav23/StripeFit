@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -11,6 +12,9 @@ ENV_FILE = BACKEND_DIR / ".env"
 UPLOAD_DIR = BACKEND_DIR / "uploads"
 DB_PATH = BACKEND_DIR / "stripefit.db"
 GMAIL_TOKEN_PATH = BACKEND_DIR / ".gmail_token.json"
+GMAIL_PENDING_PATH = BACKEND_DIR / ".gmail_oauth_pending.json"  # in-flight sign-ins (PKCE), survives reloads
+CALENDAR_TOKEN_PATH = BACKEND_DIR / ".calendar_token.json"  # separate from Gmail: its own read-only scope
+CALENDAR_PENDING_PATH = BACKEND_DIR / ".calendar_oauth_pending.json"
 MOCKS_DIR = Path(__file__).resolve().parent / "ai" / "mocks"
 
 
@@ -44,6 +48,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/gmail/callback"
+    GOOGLE_CALENDAR_REDIRECT_URI: str = "http://localhost:8000/api/calendar/callback"
 
     # Defaults
     DEFAULT_LOCATION_NAME: str = "Dublin"
@@ -51,6 +56,18 @@ class Settings(BaseSettings):
     DEFAULT_LON: float = -6.2603
     TIMEZONE: str = "Europe/Dublin"
     FREE_ITEM_LIMIT: int = 20
+    # Daily casual fit + browser notifications (Web Push). Keys come from scripts/make_vapid_keys.py.
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:stripefit-demo@example.com"  # contact for push services; use a real team address if deployed
+    DAILY_SCHEDULER_ENABLED: bool = True
+    DEMO_CONTROLS: bool = True  # /api/debug/* (AI log, demo switches). Set false if this is ever deployed.
+
+    @field_validator("FRONTEND_URL")
+    @classmethod
+    def _no_trailing_slash(cls, value: str) -> str:
+        """Links are built as f"{FRONTEND_URL}/today", and CORS needs the exact origin."""
+        return value.rstrip("/")
 
     @property
     def tz(self) -> ZoneInfo:

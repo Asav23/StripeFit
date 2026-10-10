@@ -11,17 +11,40 @@ from app.schemas import ParsedRequest
 
 OCCASION_KEYWORDS: list[tuple[str, list[str]]] = [  # first match wins, so specific occasions go first
     ("interview", ["interview", "assessment centre"]),
-    ("wedding", ["wedding", "reception", "debs", "ball", "gala", "black tie"]),
+    ("debs", ["debs", "ball", "gala", "formal"]),
+    ("wedding", ["wedding", "reception", "black tie"]),
     ("funeral", ["funeral", "memorial", "removal", "wake"]),
-    ("sport", ["football", "soccer", "training", "gym", "running", "run", "match", "rugby", "gaa", "hurling",
+    ("presentation", ["presentation", "presenting", "pitch", "giving a talk", "viva"]),
+    ("festival", ["festival", "electric picnic", "longitude", "forbidden fruit"]),
+    ("match", ["watching the match", "watch the match", "at the match", "to the match", "watching the game",
+               "croke park", "aviva", "stadium", "match day"]),
+    ("sport", ["football", "five-a-side", "five a side", "5-a-side", "5 a side", "futsal", "soccer", "training",
+               "gym", "running", "run", "match", "rugby", "gaa", "hurling",
                "camogie", "tennis", "basketball", "swim", "swimming", "yoga", "hike", "hiking", "5k", "parkrun"]),
+    ("travel", ["flight", "flying", "airport", "travel", "travelling", "traveling", "road trip", "ferry"]),
+    ("society", ["society", "societies", "soc event"]),
     ("night_out", ["night out", "club", "clubbing", "pub", "pints", "drinks", "party", "going out", "gig", "concert"]),
     ("date", ["date", "dinner date"]),
     ("work", ["work", "office", "shift", "internship", "placement", "job"]),
     ("uni", ["uni", "lecture", "lectures", "college", "campus", "class", "tutorial", "lab", "library", "seminar",
              "ucd", "tcd", "trinity", "dcu", "tu dublin", "maynooth"]),
-    ("casual", ["casual", "coffee", "shopping", "cinema", "brunch", "lunch", "friends", "chill", "walk"]),
+    ("casual", ["casual", "coffee", "shopping", "cinema", "brunch", "lunch", "friends", "chill", "walk", "errands",
+                "day off", "everyday"]),
 ]
+
+SETTING_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("outdoor", ["outdoor", "outdoors", "outside", "festival", "stadium", "match", "hike", "hiking", "park", "beach",
+                 "picnic", "garden", "beer garden"]),
+    ("indoor", ["indoor", "indoors", "inside", "cinema", "office", "lecture", "library", "restaurant", "theatre"]),
+]
+ACTIVITY_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("dancing", ["dancing", "dance", "clubbing", "club", "debs", "ball"]),
+    ("active", ["football", "gym", "running", "training", "hike", "hiking", "tennis", "swim", "yoga"]),
+    ("standing", ["gig", "concert", "festival", "match", "standing", "queue"]),
+    ("walking", ["walking", "walk", "tour", "sightseeing"]),
+    ("sitting", ["lecture", "cinema", "flight", "exam", "dinner", "meeting", "class"]),
+]
+ALL_DAY_HOURS, ALL_NIGHT_HOURS = 10, 6
 
 TRAVEL_KEYWORDS: list[tuple[str, list[str]]] = [
     ("walk", ["walk", "walking", "on foot"]),
@@ -43,6 +66,8 @@ DRESS_CODES = ["black tie", "smart casual", "business casual", "cocktail", "form
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 NOT_PLACES = set(WEEKDAYS) | {"january", "february", "march", "april", "may", "june", "july", "august",
                               "september", "october", "november", "december", "the", "my"}
+# Capitalised words that end a place name rather than belong to it ("Temple Bar Saturday" -> "Temple Bar").
+TIME_WORDS = NOT_PLACES | {"today", "tonight", "tomorrow", "next", "this", "morning", "afternoon", "evening", "noon"}
 
 
 def _has(text: str, phrase: str) -> bool:
@@ -98,10 +123,33 @@ def _resolve_time(text: str, occasion: str, now: datetime) -> datetime:
 def _destination(original: str) -> str | None:
     pattern = r"\b(?:in|at|to|near|around)\s+((?:[A-Z][\w'’-]*)(?:\s+(?:[A-Z][\w'’-]*|of|the))*)"
     for match in re.finditer(pattern, original):
-        place = re.sub(r"\s+(of|the)$", "", match.group(1)).strip()
+        words = match.group(1).split()
+        while words and words[-1].lower() in TIME_WORDS:
+            words.pop()
+        place = re.sub(r"\s+(of|the)$", "", " ".join(words)).strip()
+        if not place:
+            continue
         if place.lower() not in NOT_PLACES:
             return place
     return None
+
+
+def _duration(text: str) -> float | None:
+    """'for 3 hours', '2h', 'all day', 'all night'. Otherwise None (the occasion default applies)."""
+    match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b", text)
+    if match:
+        return float(match.group(1))
+    if "all day" in text:
+        return ALL_DAY_HOURS
+    if "all night" in text:
+        return ALL_NIGHT_HOURS
+    return None
+
+
+def classify_occasion(text: str) -> str | None:
+    """Occasion for a calendar event title/location, or None if it says nothing about clothes ("Dentist")."""
+    occasion = _first_match(text.lower(), OCCASION_KEYWORDS, "other")
+    return None if occasion == "other" else occasion
 
 
 def parse_request_rules(request_text: str, now: datetime) -> ParsedRequest:
@@ -119,6 +167,9 @@ def parse_request_rules(request_text: str, now: datetime) -> ParsedRequest:
 
     dress_code = next((code for code in DRESS_CODES if _has(text, code)), None)
     return ParsedRequest(
+        setting=_first_match(text, SETTING_KEYWORDS, "unknown"),  # type: ignore[arg-type]
+        activity=_first_match(text, ACTIVITY_KEYWORDS, "unknown"),  # type: ignore[arg-type]
+        duration_hours=_duration(text),
         occasion=occasion,  # type: ignore[arg-type]
         occasion_detail=original[:80],
         destination=_destination(original),

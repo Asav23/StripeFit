@@ -18,7 +18,8 @@ def parse_request(mock_input: dict[str, Any]) -> dict[str, Any]:
 def pick_outfit(mock_input: dict[str, Any]) -> dict[str, Any]:
     from app.services.outfit_engine import rule_based_pick
 
-    picks = rule_based_pick(mock_input["candidates"], mock_input["parsed"], mock_input["requirements"])
+    picks = rule_based_pick(mock_input["candidates"], mock_input["parsed"], mock_input["requirements"],
+                            mock_input.get("profile"))
     by_id = {c["id"]: c for c in mock_input["candidates"]}
     names = [by_id[i]["name"].lower() for i in _ids(picks) if i in by_id]
     occasion = mock_input["parsed"].get("occasion", "other").replace("_", " ")

@@ -56,6 +56,7 @@ class Item(SQLModel, table=True):
     currency: Optional[str] = None
 
     last_worn: Optional[datetime] = None
+    wears_since_wash: int = 0  # jeans and jackets get several wears; see rules.WEARS_BEFORE_WASH
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -71,6 +72,8 @@ class Outfit(SQLModel, table=True):
     used_fallback: bool = False
     feedback: Optional[str] = None  # "up" | "down" | None
     worn: bool = False
+    kind: str = Field(default="plan", index=True)  # "plan" (asked for) | "daily" (casual fit of the day)
+    for_date: Optional[str] = Field(default=None, index=True)  # daily outfits: Dublin date YYYY-MM-DD
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -78,6 +81,44 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)  # single demo user, id=1
     premium: bool = False
     premium_since: Optional[datetime] = None
+
+    # Style preferences the user states (learned ones come from StyleSignal).
+    favourite_colours: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    avoid_colours: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    style_notes: Optional[str] = None
+
+    # Daily casual fit
+    daily_enabled: bool = False
+    daily_time: str = "08:00"  # Europe/Dublin
+    daily_location: Optional[str] = None  # None = default city
+    daily_last_sent: Optional[str] = None  # Dublin date of the last morning notification
+    evening_enabled: bool = False  # the night-before notification ("what to wear tomorrow")
+    evening_time: str = "20:00"
+    evening_last_sent: Optional[str] = None  # Dublin date of the evening it was last sent
+
+
+class StyleSignal(SQLModel, table=True):
+    """One thing the user did that tells us about their taste. The style profile is built from these."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(default=1, index=True)
+    kind: str  # one of SIGNAL_KINDS
+    item_id: Optional[int] = Field(default=None, index=True)
+    outfit_id: Optional[int] = None
+    occasion: Optional[str] = None
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+SIGNAL_KINDS = ["thumbs_up", "thumbs_down", "swap_out", "swap_in", "worn"]
+
+
+class PushSubscription(SQLModel, table=True):
+    """A browser that asked for the morning notification (Web Push)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(default=1, index=True)
+    endpoint: str = Field(unique=True, index=True)
+    p256dh: str
+    auth: str
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Purchase(SQLModel, table=True):
