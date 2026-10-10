@@ -179,6 +179,39 @@ export function Choice({
   );
 }
 
+/** An on/off switch (role="switch"), styled like the selected states elsewhere. */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
+        checked ? "bg-accent" : "bg-line-strong"
+      }`}
+    >
+      <span
+        className={`absolute top-[3px] h-4 w-4 rounded-full bg-white shadow-[var(--shadow-xs)] transition-all duration-150 ${
+          checked ? "left-[19px]" : "left-[3px]"
+        }`}
+      />
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------- item bits
 
 const STATUS_DOT: Record<Status, string> = {

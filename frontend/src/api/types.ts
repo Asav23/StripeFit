@@ -78,6 +78,12 @@ export interface Weather {
   description: string;
   icon: string;
   is_wet: boolean;
+  // Across the whole event (missing on older outfits):
+  window_hours?: number | null;
+  temperature_min_c?: number | null;
+  temperature_max_c?: number | null;
+  precipitation_probability_max?: number | null;
+  rain_from?: string | null;
 }
 
 export interface ParsedRequest {
@@ -103,6 +109,80 @@ export interface Outfit {
   feedback: "up" | "down" | null;
   worn: boolean;
   created_at: string;
+  kind: "plan" | "daily";
+  for_date: string | null;
+}
+
+export type Day = "today" | "tomorrow";
+
+export interface DayEvent {
+  title: string;
+  start: string;
+  end: string;
+  all_day: boolean;
+  location: string | null;
+  occasion: string | null; // null = says nothing about clothes (e.g. "Dentist")
+}
+
+export interface DailySettings {
+  enabled: boolean; // morning notification
+  time: string; // "HH:MM", Europe/Dublin
+  location: string | null;
+  evening_enabled: boolean; // night-before notification
+  evening_time: string;
+}
+
+export interface DailySettingsOut extends DailySettings {
+  push_configured: boolean;
+  subscriptions: number;
+  last_sent_date: string | null;
+  evening_last_sent: string | null;
+  calendar_connected: boolean;
+}
+
+export interface DailyResponse {
+  day: string;
+  outfit: Outfit;
+  events: DayEvent[];
+  settings: DailySettingsOut;
+}
+
+export interface CalendarStatus {
+  configured: boolean;
+  connected: boolean;
+  demo: boolean;
+}
+
+export interface PushConfig {
+  configured: boolean;
+  public_key: string | null;
+}
+
+export interface StylePreferences {
+  favourite_colours: string[];
+  avoid_colours: string[];
+  style_notes: string | null;
+}
+
+export interface StyleProfile {
+  occasion: string;
+  stated: StylePreferences;
+  learned: {
+    liked_colours: string[];
+    disliked_colours: string[];
+    loved_item_ids: number[];
+    avoided_item_ids: number[];
+    lean_for_this_occasion: string | null;
+  };
+  liked_outfits: Record<string, string>[];
+  signals: number;
+}
+
+export interface DemoEvent {
+  title: string;
+  start: string;
+  end?: string;
+  location?: string;
 }
 
 export interface PlanResponse {

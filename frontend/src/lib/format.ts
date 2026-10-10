@@ -62,6 +62,12 @@ export const OCCASION_LABELS: Record<string, string> = {
   wedding: "Wedding",
   funeral: "Funeral",
   sport: "Sport",
+  debs: "Debs / ball",
+  society: "Society event",
+  match: "Match (watching)",
+  festival: "Festival",
+  travel: "Travel day",
+  presentation: "Presentation",
   other: "Other",
 };
 

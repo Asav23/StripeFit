@@ -1,5 +1,12 @@
 import type {
   AICallLog,
+  CalendarStatus,
+  DailyResponse,
+  DailySettings,
+  DailySettingsOut,
+  Day,
+  DayEvent,
+  DemoEvent,
   EmailJob,
   GmailJob,
   GmailStatus,
@@ -9,10 +16,13 @@ import type {
   Outfit,
   PhotoResult,
   PlanResponse,
+  PushConfig,
   Purchase,
   ReviewItem,
   Slot,
   Status,
+  StylePreferences,
+  StyleProfile,
 } from "./types";
 
 /** Every API failure becomes one of these, with a message that is safe to show. */
@@ -98,6 +108,28 @@ export const api = {
   feedback: (id: number, feedback: "up" | "down" | null) =>
     request<Outfit>(`/api/outfits/${id}/feedback`, json("POST", { feedback })),
 
+  // daily outfit (calendar + weather + laundry) and notifications
+  daily: (day: Day) => request<DailyResponse>(`/api/daily?day=${day}`),
+  dailyAnother: (day: Day) => request<DailyResponse>(`/api/daily/another?day=${day}`, json("POST")),
+  dailySettings: () => request<DailySettingsOut>("/api/daily/settings"),
+  saveDailySettings: (data: DailySettings) => request<DailySettingsOut>("/api/daily/settings", json("PUT", data)),
+  pushConfig: () => request<PushConfig>("/api/push/config"),
+  pushSubscribe: (subscription: PushSubscriptionJSON) =>
+    request<{ subscribed: boolean; subscriptions: number }>("/api/push/subscribe", json("POST", subscription)),
+  pushUnsubscribe: (endpoint: string) =>
+    request<{ subscribed: boolean; subscriptions: number }>("/api/push/unsubscribe", json("POST", { endpoint })),
+  pushTest: () => request<{ sent: number; removed: number }>("/api/push/test", json("POST")),
+
+  // google calendar
+  calendarStatus: () => request<CalendarStatus>("/api/calendar/status"),
+  calendarAuthUrl: () => request<{ url: string }>("/api/calendar/auth-url"),
+  calendarDisconnect: () => request<{ connected: boolean }>("/api/calendar/disconnect", json("POST")),
+  calendarEvents: (day: Day) => request<DayEvent[]>(`/api/calendar/events?day=${day}`),
+
+  // personal style
+  styleProfile: (occasion = "casual") => request<StyleProfile>(`/api/style/profile?occasion=${occasion}`),
+  saveStylePreferences: (data: StylePreferences) => request<StylePreferences>("/api/style/preferences", json("PUT", data)),
+
   // pro
   checkout: () => request<{ url: string }>("/api/stripe/checkout", json("POST")),
   stripeSession: (id: string) =>
@@ -119,4 +151,7 @@ export const api = {
   mockOverrides: () => request<{ overrides: Record<string, string> }>("/api/debug/mock-override"),
   setMockOverride: (task: string, variant: string | null) =>
     request<{ overrides: Record<string, string> }>("/api/debug/mock-override", json("POST", { task, variant })),
+  demoCalendar: () => request<{ events: DemoEvent[] | null }>("/api/debug/demo-calendar"),
+  setDemoCalendar: (events: DemoEvent[] | null) =>
+    request<{ events: DemoEvent[] | null }>("/api/debug/demo-calendar", json("POST", { events })),
 };

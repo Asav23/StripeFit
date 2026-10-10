@@ -50,7 +50,7 @@ def count(session: Session, user_id: int = 1) -> int:
     return len(session.exec(select(PushSubscription).where(PushSubscription.user_id == user_id)).all())
 
 
-def send_all(session: Session, title: str, body: str, url: str = "/plan", user_id: int = 1) -> tuple[int, int]:
+def send_all(session: Session, title: str, body: str, url: str = "/today", user_id: int = 1) -> tuple[int, int]:
     """Send to every subscribed browser. Returns (sent, removed). Never raises."""
     if not configured():
         return 0, 0

@@ -6,28 +6,30 @@ Read `CLAUDE.md` (project rules) and `PLAN.md` (phased spec) first. This file sa
 
 ## Status in one paragraph
 
-All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks, and a daily outfit planned from Google Calendar, the weather and your laundry, sent as a notification the night before (backend only; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
+All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks, and a daily outfit planned from Google Calendar, the weather and your laundry, sent as a notification the night before (backend and frontend; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
 
-## Frontend still to build (start here)
+## Frontend for the new features (built; start here to test)
 
-**The newest backend features have no UI yet.** The backend APIs are finished and tested. The current React app doesn't call them, so users can't see these features until the frontend below is built. Everything older, such as the wardrobe, photos, Review, planning, laundry, Pro and order import, already has a UI.
+The frontend is built on top of the Stripe-style redesign that was merged from `main` (commit `1d89f31`). It type-checks, builds, and was checked with screenshots at phone width (390 px) and desktop width.
 
-| # | Build this | Backend it uses | Details |
-|---|---|---|---|
-| 1 | **Service worker** `frontend/public/sw.js`: show the push `{title, body}` and open `data.url` when the notification is tapped | Web Push payload | Daily outfit section, "The frontend still needs to be built" |
-| 2 | **Notification settings**: a "Night before" switch with a time picker (default 20:00), an optional "Morning" switch with a time picker, and a "Send a test" button. A switch asks permission, subscribes the browser, then saves the settings | `GET /api/push/config`, `POST /api/push/subscribe` and `/unsubscribe`, `PUT /api/daily/settings`, `POST /api/push/test` | Same section |
-| 3 | **"Tomorrow" / "Today" outfit card**: the outfit (reuse `OutfitCard`), the day's events, the notices (packing and laundry tips) and an "Another option" button. Open it from `/plan?daily=tomorrow` | `GET /api/daily?day=…`, `POST /api/daily/another?day=…` | Same section |
-| 4 | **"Connect Google Calendar" button**, plus handling `?calendar=connected\|cancelled\|error` on return, and a Disconnect button | `/api/calendar/status`, `/auth-url`, `/disconnect` | "Human step: connect Google Calendar" |
-| 5 | **"My style" screen**: favourite colours, colours to avoid, notes, and what was learned | `PUT /api/style/preferences`, `GET /api/style/profile` | Outfits section, "Still to do" |
-| 6 | **Labels for the new occasions** (debs, society, match, festival, travel, presentation) in `OCCASION_LABELS` | `frontend/src/lib/format.ts` | Without them the UI shows raw keys like `night_out` |
-| 7 | **Whole-event weather on the outfit card**: "down to X° later" from `temperature_min_c`, the rain chance from `precipitation_probability_max`, and "rain from HH:MM" | `WeatherOut` fields | Outfits section |
-| 8 | **Demo calendar controls** on the AI log page, to fake tomorrow's events for a demo | `GET/POST /api/debug/demo-calendar` | "Demo without Google" |
+| Where | What you can do |
+|---|---|
+| **Today tab** (new; second in the sidebar and the phone tab bar) | Switch between Today and Tomorrow. See the day's calendar events, with the one the outfit is dressed for highlighted. See the outfit (swap, wear, thumbs up or down), the packing and laundry tips, and "Another option" |
+| Today → **Outfit notifications** | "Night before" and "Morning" switches, each with a time picker. A switch asks for notification permission, subscribes this browser and saves the settings. "Send a test now" pushes tomorrow's outfit straight away |
+| Today → **Google Calendar** | Connect (Google consent screen, then back to `/today?calendar=connected`) or Disconnect. Shows "Demo events" when the demo calendar is on |
+| Today → **My style** | Tap a colour once to love it and twice to avoid it, add a note, and save. Shows what was learned from thumbs, swaps and worn outfits |
+| **Outfit cards everywhere** | "Down to X° later", the highest rain chance across the event and "from HH:MM", and labels for the new occasions |
+| **AI log → Demo controls** | "Calendar used by the Today tab" presets: Interview + football, Lectures + night out, Wedding, Nothing on, Real calendar |
+| **Plan tab** | Unchanged, except daily outfits no longer clutter "Recent plans" |
 
-**Notes for whoever builds it:**
-- **Keep the types in sync.** Add the new response types to `frontend/src/api/types.ts`: `DailyResponse`, `DailySettingsOut`, `DayEventOut`, `PushConfig`, `StylePreferences`, plus the new `Outfit` fields `kind` and `for_date`. Then run `npx tsc --noEmit`.
-- **Settings replace everything.** `PUT /api/daily/settings` is a full replace, so send every field.
-- **Error codes to handle:** `push_not_configured`, `no_subscriptions`, `push_failed`, `calendar_not_configured`, `calendar_error` and `invalid_day`, plus the existing `empty_wardrobe` and `nothing_available`.
-- **Browser support.** Push works on `localhost` in Chrome, Edge and Firefox. On iPhone it only works once the site is added to the Home Screen, which needs https in production.
+**A 2-minute UI test**
+1. Go to AI log → Demo controls, choose **Interview + football**, then choose **Rain, 9°C**.
+2. Open **Today → Tomorrow**. The outfit should be dressed for the interview, with a waterproof jacket, a "bring your sports kit" tip and the rain start time.
+3. Click **Another option**, swap a piece, and give a thumbs up. Open **My style** to see that it learned something.
+4. Switch on **Night before** and allow notifications, then click **Send a test now**. A "Tomorrow's outfit" notification should appear, and tapping it opens the Today tab. Use Chrome or Edge at `http://localhost:5173`.
+5. Set the demo controls back to **Real forecast** and **Real calendar**.
+
+**Not verified by machine.** Push permission prompts can't be clicked in a headless browser, so the browser subscribing and the notification appearing need one manual check (step 4). The server side of push, signing and delivery, is tested.
 
 ## What's left to do
 
@@ -65,7 +67,7 @@ Nobody has clicked through the frontend redesign (commit `90b5ed5`) yet. It type
 - every AI action shows a loading state;
 - the layout works at phone width.
 
-## Outfits that suit the event and the person (backend built)
+## Outfits that suit the event and the person
 
 **Goal:** the stylist model on OpenRouter picks the best combination for the event and learns what each user likes. Stages 1 to 4 below are built in the backend and tested in mock mode. Stage 5 is partly built. Real-model quality still has to be checked once the OpenRouter key is in: run `python scripts/check_outfits.py` and `python scripts/check_extraction.py`.
 
@@ -88,14 +90,12 @@ Nobody has clicked through the frontend redesign (commit `90b5ed5`) yet. It type
 
 ### Still to do
 1. **Real-model check.** With the OpenRouter key in, run `check_outfits.py`. Tune `PICK_SYSTEM` or the style guide until the score holds, and check the explanations cite a style guide point or a taste reason.
-2. **Frontend: style preferences screen.** Use `PUT /api/style/preferences` with `{favourite_colours, avoid_colours, style_notes}`, and `GET /api/style/profile?occasion=casual` to show what was learned.
-3. **Frontend: labels for the new occasions** in `OCCASION_LABELS` in `frontend/src/lib/format.ts`. Until then the UI shows the raw key, such as `night_out`.
-4. **Frontend: whole-event weather on the outfit card.** For example "down to 6° later", and the rain chance from `precipitation_probability_max`.
-5. **Recording review edits as signals.** Not done yet, because they're about labels more than taste.
-6. **Stage 5: actual training.** As far as we know, OpenRouter doesn't offer fine-tuning, so fine-tuning would break the "OpenRouter only" rule in `CLAUDE.md`, and that's a team decision. Today's per-user "re-ranker" is the signal-weighted scoring in `style_profile.preference_score()`. It is transparent, local, free and per user. A learned model, such as logistic regression on the exported dataset, could replace it later without touching the API.
-7. **Multiple users.** Everything is keyed by `user_id` (always 1 today), so real accounts can be added without a rewrite.
+2. **Frontend for style, new occasion labels and whole-event weather.** Done, in the Today tab and on the outfit cards.
+3. **Recording review edits as signals.** Not done yet, because they're about labels more than taste.
+4. **Stage 5: actual training.** As far as we know, OpenRouter doesn't offer fine-tuning, so fine-tuning would break the "OpenRouter only" rule in `CLAUDE.md`, and that's a team decision. Today's per-user "re-ranker" is the signal-weighted scoring in `style_profile.preference_score()`. It is transparent, local, free and per user. A learned model, such as logistic regression on the exported dataset, could replace it later without touching the API.
+5. **Multiple users.** Everything is keyed by `user_id` (always 1 today), so real accounts can be added without a rewrite.
 
-## Daily outfit from your calendar, weather and laundry, sent the night before (backend built)
+## Daily outfit from your calendar, weather and laundry, sent the night before
 
 **Goal:** every evening, tell the user what to wear tomorrow. The outfit should be dressed for what is actually on their Google Calendar, ready for tomorrow's weather across the whole day, and made only from clothes that will be clean. A morning reminder is optional.
 
@@ -139,7 +139,7 @@ Send `{"events": null}` to switch back to the real calendar. Combine it with the
 | `GET /api/daily/settings` | `{enabled, time, location, evening_enabled, evening_time, push_configured, subscriptions, last_sent_date, evening_last_sent, calendar_connected}` |
 | `PUT /api/daily/settings` | Body `{enabled, time, location, evening_enabled, evening_time}`. This is a full replace, so send every field. Times are "HH:MM" in Dublin time |
 | `GET /api/calendar/status` | `{configured, connected, demo}` |
-| `GET /api/calendar/auth-url` | The Google consent link. The callback is `/api/calendar/callback`, which redirects to `/plan?calendar=connected\|cancelled\|error` |
+| `GET /api/calendar/auth-url` | The Google consent link. The callback is `/api/calendar/callback`, which redirects to `/today?calendar=connected\|cancelled\|error` |
 | `POST /api/calendar/disconnect` | Deletes the token |
 | `GET /api/calendar/events?day=tomorrow` | The events as the planner sees them, with titles, for the owner only |
 | `GET /api/push/config` | `{configured, public_key}` |
@@ -165,14 +165,8 @@ This uses the same Google Cloud project and OAuth client as Gmail, in step 3 abo
 - **OAuth.** The scope is calendar read-only only, with PKCE and the correct redirect URI. A forged state or a cancelled sign-in redirects safely.
 - **Not tested.** A real Google account, which needs the human step above.
 
-### The frontend still needs to be built
-The backend is complete. The current UI doesn't use any of this yet. It needs:
-1. **A service worker** at `/sw.js`, placed in `frontend/public/`. On `push`, it shows `{title, body}` from the JSON. On `notificationclick`, it opens `data.url`, either `/plan?daily=tomorrow` or `/plan?daily=today`.
-2. **A notification settings card.** It needs a "Night before" switch with a time picker (default 20:00) and an optional "Morning" switch with a time picker. Turning a switch on asks `Notification` permission, calls `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})` with the public key from `/api/push/config` (base64url-decoded), POSTs to `/api/push/subscribe`, then calls `PUT /api/daily/settings`. Add a "Send a test" button.
-3. **A "Tomorrow" / "Today" outfit card.** Show `GET /api/daily?day=…` with the existing `OutfitCard`. List the day's events, and show the notices for packing and laundry tips, plus an "Another option" button.
-4. **A "Connect Google Calendar" button** using `/api/calendar/auth-url`, and handling of `?calendar=connected|cancelled|error` on return.
-5. **Labels and weather.** Add labels for the new occasions in `frontend/src/lib/format.ts`. Show "down to X° later" and `rain_from` on the weather panel.
-6. **Browser support.** Push works in Chrome, Edge and Firefox on `localhost`. On iPhone, it only works once the site is added to the Home Screen, which needs https in production.
+### Frontend
+Built: see "Frontend for the new features" at the top of this file.
 
 ## Done on this branch
 

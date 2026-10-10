@@ -10,6 +10,7 @@ import PlanPage from "./pages/PlanPage";
 import ProPage from "./pages/ProPage";
 import ProSuccessPage from "./pages/ProSuccessPage";
 import ReviewPage from "./pages/ReviewPage";
+import TodayPage from "./pages/TodayPage";
 import WardrobePage from "./pages/WardrobePage";
 
 createRoot(document.getElementById("root")!).render(
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")!).render(
               <Route index element={<WardrobePage />} />
               <Route path="add" element={<AddPage />} />
               <Route path="review" element={<ReviewPage />} />
+              <Route path="today" element={<TodayPage />} />
               <Route path="plan" element={<PlanPage />} />
               <Route path="pro" element={<ProPage />} />
               <Route path="pro/success" element={<ProSuccessPage />} />

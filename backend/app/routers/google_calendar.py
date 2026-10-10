@@ -36,7 +36,7 @@ def auth_url() -> dict[str, str]:
 @router.get("/callback")
 def callback(code: Optional[str] = None, state: Optional[str] = None, error: Optional[str] = None) -> RedirectResponse:
     """Google redirects here after consent. We always send the browser back to the app."""
-    target = f"{settings.FRONTEND_URL}/plan?calendar="
+    target = f"{settings.FRONTEND_URL}/today?calendar="
     if error or not code or not state:
         return RedirectResponse(target + "cancelled")
     try:

@@ -74,7 +74,7 @@ export default function PlanPage() {
     }
   };
 
-  const past = history.filter((h) => h.id !== outfit?.id).slice(0, 8);
+  const past = history.filter((h) => h.id !== outfit?.id && h.kind !== "daily").slice(0, 8);
 
   return (
     <div>

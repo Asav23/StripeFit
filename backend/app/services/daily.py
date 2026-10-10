@@ -220,7 +220,7 @@ def notify(session: Session, day: date, title: str) -> tuple[int, int]:
     """Make sure the day's outfit exists and push it to every subscribed browser. Returns (sent, removed)."""
     outfit, _ = get_or_make(session, day)
     which = "today" if day == datetime.now(settings.tz).date() else "tomorrow"
-    return push.send_all(session, title, notification_body(session, outfit), url=f"/plan?daily={which}")
+    return push.send_all(session, title, notification_body(session, outfit), url=f"/today?day={which}")
 
 
 def _at(now: datetime, hh_mm: str) -> datetime:
