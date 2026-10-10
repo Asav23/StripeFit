@@ -24,3 +24,6 @@ frontend/dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Style dataset exports (may contain personal data)
+backend/exports/

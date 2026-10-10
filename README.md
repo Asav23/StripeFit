@@ -57,7 +57,8 @@ Everything else (code, models, sample data, Stripe product setup scripts) is don
 1. Create a key at <https://openrouter.ai/keys> and add a few dollars of credit (the whole demo costs cents).
 2. In `backend/.env` set `OPENROUTER_API_KEY=sk-or-...` and `USE_MOCK_AI=false`. The API reloads by itself.
 3. Optional: run `python scripts/check_models.py` from `backend/`. It runs each configured model on real calls and reports which return valid JSON.
-4. Optional: run `python scripts/check_extraction.py` from `backend/`. It sends each sample order email to the real model and compares the result with the expected answer (refund matched, exchange old/new, child size, gift, German, unknown colour, injection ignored). Any `DIFF` line says what to tune in `app/ai/prompts.py`.
+4. Optional: run `python scripts/check_outfits.py` from `backend/` to score the stylist on fixed scenarios (event rules, weather, taste).
+5. Optional: run `python scripts/check_extraction.py` from `backend/`. It sends each sample order email to the real model and compares the result with the expected answer (refund matched, exchange old/new, child size, gift, German, unknown colour, injection ignored). Any `DIFF` line says what to tune in `app/ai/prompts.py`.
 
 ### 2. Stripe test keys (Pro purchase)
 1. In the Stripe dashboard, switch to **Test mode**. Under **Developers → API keys**, copy the keys.
@@ -123,6 +124,6 @@ Chosen from the OpenRouter catalogue (`python scripts/list_models.py`). Each tas
 Change them in `backend/.env` (never hard-coded).
 
 ## API overview
-`GET /api/health` · `GET /api/me` · `GET/POST/PATCH/DELETE /api/items` · `POST /api/items/{id}/status` · `POST /api/items/wash-worn` · `POST /api/items/laundry-done` · `POST /api/items/bulk-delete` · `POST /api/ingest/photo` · `POST /api/ingest/email|samples` (starts a background job) · `GET /api/ingest/jobs/{id}` (progress + summary) · `GET /api/review` · `POST /api/review/{id}/confirm|reject` · `POST /api/outfits/plan` · `GET /api/outfits` · `POST /api/outfits/{id}/swap|wear|feedback` · `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `GET /api/stripe/session/{id}` · `GET /api/gmail/status|auth-url|callback` · `POST /api/gmail/import|disconnect` · `GET /api/debug/ai-calls`
+`GET /api/health` · `GET /api/me` · `GET/POST/PATCH/DELETE /api/items` · `POST /api/items/{id}/status` · `POST /api/items/wash-worn` · `POST /api/items/laundry-done` · `POST /api/items/bulk-delete` · `POST /api/ingest/photo` · `POST /api/ingest/email|samples` (starts a background job) · `GET /api/ingest/jobs/{id}` (progress + summary) · `GET /api/review` · `POST /api/review/{id}/confirm|reject` · `POST /api/outfits/plan` · `GET /api/outfits` · `POST /api/outfits/{id}/swap|wear|feedback` · `POST /api/stripe/checkout` · `POST /api/stripe/webhook` · `GET /api/stripe/session/{id}` · `GET /api/gmail/status|auth-url|callback` · `POST /api/gmail/import|disconnect` · `GET /api/debug/ai-calls` · `GET /api/daily` · `POST /api/daily/another` · `GET/PUT /api/daily/settings` · `GET /api/push/config` · `POST /api/push/subscribe|unsubscribe|test` · `GET /api/style/profile` · `PUT /api/style/preferences`
 
 Interactive docs: <http://localhost:8000/docs>

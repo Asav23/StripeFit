@@ -6,29 +6,15 @@ isn't needed. Needs the Stripe CLI (Windows: `winget install Stripe.StripeCli`; 
 Run from backend/:  python scripts/stripe_listen.py     (leave it running)
 """
 
-import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from env_file import ENV_PATH, read_env_value, write_env_value  # noqa: E402
+
 FORWARD_TO = "127.0.0.1:8000/api/stripe/webhook"
-
-
-def read_env_value(name: str) -> str:
-    match = re.search(rf"^{name}=(.*)$", ENV_PATH.read_text(encoding="utf-8"), re.MULTILINE)
-    return match.group(1).strip() if match else ""
-
-
-def write_env_value(name: str, value: str) -> None:
-    text = ENV_PATH.read_text(encoding="utf-8")
-    line = f"{name}={value}"
-    if re.search(rf"^{name}=", text, re.MULTILINE):
-        text = re.sub(rf"^{name}=.*$", lambda _: line, text, flags=re.MULTILINE)
-    else:
-        text = text.rstrip("\n") + f"\n{line}\n"
-    ENV_PATH.write_text(text, encoding="utf-8")
 
 
 def main() -> None:

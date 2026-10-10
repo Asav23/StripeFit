@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     DEFAULT_LON: float = -6.2603
     TIMEZONE: str = "Europe/Dublin"
     FREE_ITEM_LIMIT: int = 20
+    # Daily casual fit + browser notifications (Web Push). Keys come from scripts/make_vapid_keys.py.
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:stripefit-demo@example.com"  # contact for push services; use a real team address if deployed
+    DAILY_SCHEDULER_ENABLED: bool = True
     DEMO_CONTROLS: bool = True  # /api/debug/* (AI log, demo switches). Set false if this is ever deployed.
 
     @property

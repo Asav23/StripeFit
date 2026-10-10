@@ -14,7 +14,16 @@ from app.models import CATEGORIES, as_utc
 Category = Literal["top", "bottom", "one_piece", "outerwear", "shoes", "accessory", "sportswear", "unknown"]
 Owner = Literal["me", "child", "other", "unknown"]
 Status = Literal["available", "worn", "in_wash", "unavailable", "on_the_way", "returned"]
-Occasion = Literal["uni", "casual", "night_out", "date", "interview", "work", "wedding", "funeral", "sport", "other"]
+Occasion = Literal["uni", "casual", "night_out", "date", "interview", "work", "wedding", "funeral", "sport",
+                   "debs", "society", "match", "festival", "travel", "presentation", "other"]
+Setting = Literal["indoor", "outdoor", "mixed", "unknown"]
+Activity = Literal["sitting", "standing", "dancing", "walking", "active", "unknown"]
+OCCASION_SYNONYMS = {
+    "ball": "debs", "formal": "debs", "prom": "debs", "lecture": "uni", "college": "uni", "class": "uni",
+    "gym": "sport", "training": "sport", "game": "match", "party": "night_out", "club": "night_out",
+    "nightout": "night_out", "job_interview": "interview", "trip": "travel", "flight": "travel",
+    "talk": "presentation", "societies": "society", "soc": "society", "everyday": "casual",
+}
 TravelMode = Literal["walk", "cycle", "bus", "train", "car", "unknown"]
 Slot = Literal["top", "bottom", "one_piece", "outerwear", "shoes", "accessory"]
 
@@ -101,12 +110,43 @@ class ParsedRequest(BaseModel):
     travel_mode: TravelMode = "unknown"
     dress_code: Optional[str] = None
     needs_clarification: Optional[str] = None
+    setting: Setting = "unknown"  # indoor / outdoor / mixed
+    duration_hours: Optional[float] = None  # how long the event lasts, if the note says
+    activity: Activity = "unknown"  # mostly sitting, standing, dancing, walking, or active
+
+    @field_validator("occasion", mode="before")
+    @classmethod
+    def _occasion(cls, value: Any) -> Any:
+        """Map synonyms; anything else unrecognised becomes "other" instead of failing the whole parse."""
+        if not isinstance(value, str):
+            return value
+        text = value.strip().lower().replace(" ", "_").replace("-", "_")
+        text = OCCASION_SYNONYMS.get(text, text)
+        return text if text in Occasion.__args__ else "other"  # type: ignore[attr-defined]
+
+    @field_validator("setting", "activity", mode="before")
+    @classmethod
+    def _known_or_unknown(cls, value: Any, info: Any) -> Any:
+        allowed = (Setting if info.field_name == "setting" else Activity).__args__  # type: ignore[attr-defined]
+        text = value.strip().lower() if isinstance(value, str) else "unknown"
+        return text if text in allowed else "unknown"
+
+    @field_validator("duration_hours", mode="before")
+    @classmethod
+    def _hours(cls, value: Any) -> Optional[float]:
+        if is_unknown(value):
+            return None
+        try:
+            hours = float(value)
+        except (TypeError, ValueError):
+            return None
+        return hours if 0 < hours <= 24 else None
 
     _unk = field_validator("occasion_detail", "destination", "dress_code", "needs_clarification", mode="before")(
         none_if_unknown
     )
 
-    @field_validator("occasion", "travel_mode", mode="before")
+    @field_validator("travel_mode", mode="before")
     @classmethod
     def _lower(cls, value: Any) -> Any:
         return value.strip().lower().replace(" ", "_").replace("-", "_") if isinstance(value, str) else value
@@ -299,6 +339,11 @@ class WeatherOut(BaseModel):
     description: str
     icon: str
     is_wet: bool
+    # Across the whole event (None on outfits saved before this existed):
+    window_hours: Optional[float] = None
+    temperature_min_c: Optional[float] = None
+    temperature_max_c: Optional[float] = None
+    precipitation_probability_max: Optional[int] = None
 
 
 class OutfitSlotOut(BaseModel):
@@ -319,6 +364,8 @@ class OutfitOut(BaseModel):
     feedback: Optional[str]
     worn: bool
     created_at: datetime
+    kind: str = "plan"  # "plan" (asked for) | "daily" (the casual fit of the day)
+    for_date: Optional[str] = None  # daily outfits: the Dublin date, YYYY-MM-DD
 
     _utc = field_validator("created_at")(as_utc)
 
@@ -360,3 +407,64 @@ class IngestSummary(BaseModel):
     items_updated: int
     skipped: dict[str, int]  # reason -> count
     summary: str
+
+
+# --------------------------------------------------------------------------- personal style
+
+
+class StylePreferences(BaseModel):
+    """What the user tells us directly. Learned signals are added on top (see services/style_profile.py)."""
+    favourite_colours: list[str] = Field(default_factory=list, max_length=10)
+    avoid_colours: list[str] = Field(default_factory=list, max_length=10)
+    style_notes: Optional[str] = Field(default=None, max_length=300)  # e.g. "I prefer relaxed fits"
+
+    @field_validator("favourite_colours", "avoid_colours", mode="before")
+    @classmethod
+    def _clean(cls, value: Any) -> list[str]:
+        items = value.split(",") if isinstance(value, str) else (value or [])
+        return [str(c).strip().lower() for c in items if str(c).strip()][:10]
+
+
+# --------------------------------------------------------------------------- daily casual fit + notifications
+
+
+class DailySettings(BaseModel):
+    enabled: bool = False  # send a notification every morning
+    time: str = Field(default="08:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")  # Europe/Dublin
+    location: Optional[str] = Field(default=None, max_length=80)  # None = the default city
+
+    _unk = field_validator("location", mode="before")(none_if_unknown)
+
+
+class DailySettingsOut(DailySettings):
+    push_configured: bool
+    subscriptions: int
+    last_sent_date: Optional[str]
+
+
+class DailyResponse(BaseModel):
+    outfit: OutfitOut
+    settings: DailySettingsOut
+
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=1000)
+    keys: dict[str, str]  # {"p256dh": ..., "auth": ...} as the browser gives them
+
+    @field_validator("endpoint")
+    @classmethod
+    def _https(cls, value: str) -> str:
+        if not value.startswith("https://"):
+            raise ValueError("push endpoint must be https")
+        return value
+
+    @field_validator("keys")
+    @classmethod
+    def _keys(cls, value: dict[str, str]) -> dict[str, str]:
+        if not value.get("p256dh") or not value.get("auth"):
+            raise ValueError("missing p256dh/auth keys")
+        return {"p256dh": value["p256dh"], "auth": value["auth"]}
+
+
+class PushUnsubscribeIn(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=1000)

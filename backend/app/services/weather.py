@@ -125,8 +125,9 @@ def geocode(name: str) -> tuple[str, float, float] | None:
     return None
 
 
-def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | None, list[str]]:
-    """Weather at the hour nearest `when` at the destination (or the default location)."""
+def forecast_for(destination: str | None, when: datetime, hours: float = 1) -> tuple[WeatherOut | None, list[str]]:
+    """Weather at the hour nearest `when` at the destination (or the default location), plus the
+    coldest/warmest hour and the highest rain chance across the next `hours` (the whole event)."""
     notices: list[str] = []
     tz = settings.tz
     when = when.astimezone(tz) if when.tzinfo else when.replace(tzinfo=tz)
@@ -144,7 +145,7 @@ def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | 
     label, lat, lon = place
 
     if OVERRIDE is not None:
-        return _weather_from(OVERRIDE, label, when), notices + ["Demo weather is on (set on the AI log page)."]
+        return _weather_from(OVERRIDE, label, when, hours), notices + ["Demo weather is on (set on the AI log page)."]
 
     try:
         data = _get_json(FORECAST_URL, {
@@ -170,6 +171,14 @@ def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | 
     rain_mm = hourly["precipitation"][i]
     code = hourly["weather_code"][i]
     description, icon = WEATHER_CODES.get(code if code is not None else -1, ("Unknown conditions", "🌡️"))
+
+    # Whole event: every forecast hour from the start until `hours` later.
+    end = times[i] + timedelta(hours=max(hours, 1) - 1)
+    window = [k for k in range(i, len(times)) if times[k] <= end]
+    temps = [hourly["temperature_2m"][k] for k in window if hourly["temperature_2m"][k] is not None]
+    probs = [hourly["precipitation_probability"][k] for k in window if hourly["precipitation_probability"][k] is not None]
+    rain = [hourly["precipitation"][k] for k in window if hourly["precipitation"][k] is not None]
+    prob_max = max(probs) if probs else rain_prob
     weather = WeatherOut(
         location_name=label,
         time=times[i].isoformat(),
@@ -180,12 +189,16 @@ def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | 
         weather_code=code,
         description=description,
         icon=icon,
-        is_wet=is_wet(rain_prob, rain_mm),
+        is_wet=is_wet(prob_max, max(rain) if rain else rain_mm),
+        window_hours=round(hours, 1),
+        temperature_min_c=round(float(min(temps)), 1) if temps else round(float(temp), 1),
+        temperature_max_c=round(float(max(temps)), 1) if temps else round(float(temp), 1),
+        precipitation_probability_max=prob_max,
     )
     return weather, notices
 
 
-def _weather_from(values: dict[str, Any], label: str, when: datetime) -> WeatherOut:
+def _weather_from(values: dict[str, Any], label: str, when: datetime, hours: float = 1) -> WeatherOut:
     description, icon = WEATHER_CODES.get(values["weather_code"], ("Unknown conditions", "🌡️"))
     return WeatherOut(
         location_name=label,
@@ -198,4 +211,8 @@ def _weather_from(values: dict[str, Any], label: str, when: datetime) -> Weather
         description=description,
         icon=icon,
         is_wet=is_wet(values["precipitation_probability"], values["precipitation_mm"]),
+        window_hours=round(hours, 1),
+        temperature_min_c=values["temperature_c"],
+        temperature_max_c=values["temperature_c"],
+        precipitation_probability_max=values["precipitation_probability"],
     )

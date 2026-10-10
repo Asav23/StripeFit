@@ -50,9 +50,5 @@ def wear(outfit_id: int, session: Session = Depends(get_session)) -> OutfitOut:
 
 @router.post("/{outfit_id}/feedback", response_model=OutfitOut)
 def feedback(outfit_id: int, body: FeedbackRequest, session: Session = Depends(get_session)) -> OutfitOut:
-    outfit = _get(session, outfit_id)
-    outfit.feedback = body.feedback
-    session.add(outfit)
-    session.commit()
-    session.refresh(outfit)
+    outfit = outfit_engine.set_feedback(session, _get(session, outfit_id), body.feedback)
     return outfit_engine.outfit_out(session, outfit)

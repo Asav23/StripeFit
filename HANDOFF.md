@@ -6,7 +6,7 @@ Read `CLAUDE.md` (project rules) and `PLAN.md` (phased spec) first. This file sa
 
 ## Status in one paragraph
 
-All 8 phases in `PLAN.md` are built. Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
+All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks and a daily casual fit with morning notifications (backend only; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
 
 ## What's left to do
 
@@ -41,74 +41,81 @@ Nobody has clicked through the frontend redesign (commit `90b5ed5`) yet. It type
 - every AI action shows a loading state;
 - the layout works at phone width.
 
-## Next: outfits that suit the event and the person
+## Outfits that suit the event and the person (backend built)
 
-**Goal:** the stylist model on OpenRouter should pick the best combination for the event, and learn what each user likes. Do this after the real-AI checks in step 1 pass.
+**Goal:** the stylist model on OpenRouter picks the best combination for the event and learns what each user likes. Stages 1 to 4 below are built in the backend and tested in mock mode. Stage 5 is partly built. Real-model quality still has to be checked once the OpenRouter key is in: run `python scripts/check_outfits.py` and `python scripts/check_extraction.py`.
 
-**How it works today:**
-- The parser maps a request to one of 10 occasions, such as `interview`, `wedding` and `night_out`.
-- `services/rules.py` turns the occasion into a formality range from 1 to 5, plus weather rules. The model gets only the items that pass these rules.
-- The stylist prompt (`PICK_SYSTEM` in `app/ai/prompts.py`) knows the occasion name, the formality range, the weather and `days_since_worn`. It has no guidance on what is appropriate for an event, beyond colours that work together.
-- The only personal signal stored is a thumbs up or down per outfit (`Outfit.feedback`) and `Item.last_worn`. Swaps aren't recorded, so the app never learns which item the user rejected.
+### What is built
+- **Event knowledge.** `services/rules.py` holds `EVENT_STYLE_GUIDE`: what each occasion expects, what to avoid, good combinations, plus `COLOUR_RULES`. The guide for the occasion is sent with every pick, and the prompt (`PICK_SYSTEM`) sets the priority: hard rules, then the style guide, then the user's taste. Some rules are enforced in code, not just suggested:
+  - no white, cream or ivory dress at a wedding (`AVOID_MAIN_COLOURS`);
+  - bright colours are ranked lower at funerals and interviews (`DISPREFER_COLOURS`).
+- **New occasions:** `debs`, `society`, `match` (watching), `festival`, `travel` and `presentation`, each with a formality range. Both the AI parser and the keyword parser know them. Unknown occasion words from the model map to `other` instead of failing.
+- **Richer context.** `ParsedRequest` now has `setting` (indoor, outdoor or mixed), `duration_hours` and `activity`.
+- **Weather for the whole event.** It's checked across the event's hours, using `DEFAULT_DURATION_HOURS` per occasion or the parsed duration. `WeatherOut` adds `window_hours`, `temperature_min_c`, `temperature_max_c` and `precipitation_probability_max`. Coats and layers are chosen for the coldest hour, and rain for the wettest.
+- **Taste learning, with no training run.** The `StyleSignal` table records thumbs up or down (toggling replaces, it doesn't stack), swaps (the item rejected and the item chosen) and worn outfits. `services/style_profile.py` builds a profile from these signals plus stated preferences:
+  - liked and avoided colours;
+  - loved and rejected items;
+  - dressier or more relaxed than usual, per occasion;
+  - past liked outfits.
 
-The model can't be trusted to "just know" what suits an event. It needs the context written down, and it needs the user's history passed in. The stages below do that, in order. Each one is useful on its own.
+  The model gets a compact `user_taste` summary. The rule-based ranking, used for the fallback and mock mode, scores items by the same signals. Signals decay over 60 days. The profile only reorders candidates that already passed the rules.
+- **Measuring.** `python scripts/check_outfits.py [--mock]` runs 14 fixed scenarios against a fixed test wardrobe, with 28 code checks. It covers formality, rain, cold, heat, no white at a wedding, no bright colours at a funeral, sportswear for sport, and loved or avoided items. It scores 28 of 28 with the rule-based picker. Run it before and after every prompt change.
+- **Training data.** `python scripts/export_style_dataset.py` writes one JSON line per outfit: context, weather, item features, thumbs, worn and swaps. It goes to `backend/exports/`, which is gitignored. Free text is left out unless you pass `--include-text`.
 
-### Stage 1: event knowledge (no new data needed)
-1. **Add an event style guide** as a constant in `services/rules.py`. Business rules live there, not in prompts. Give each occasion a few short lines on:
-   - what is expected;
-   - what to avoid;
-   - typical good combinations.
+### Still to do
+1. **Real-model check.** With the OpenRouter key in, run `check_outfits.py`. Tune `PICK_SYSTEM` or the style guide until the score holds, and check the explanations cite a style guide point or a taste reason.
+2. **Frontend: style preferences screen.** Use `PUT /api/style/preferences` with `{favourite_colours, avoid_colours, style_notes}`, and `GET /api/style/profile?occasion=casual` to show what was learned.
+3. **Frontend: labels for the new occasions** in `OCCASION_LABELS` in `frontend/src/lib/format.ts`. Until then the UI shows the raw key, such as `night_out`.
+4. **Frontend: whole-event weather on the outfit card.** For example "down to 6° later", and the rain chance from `precipitation_probability_max`.
+5. **Recording review edits as signals.** Not done yet, because they're about labels more than taste.
+6. **Stage 5: actual training.** As far as we know, OpenRouter doesn't offer fine-tuning, so fine-tuning would break the "OpenRouter only" rule in `CLAUDE.md`, and that's a team decision. Today's per-user "re-ranker" is the signal-weighted scoring in `style_profile.preference_score()`. It is transparent, local, free and per user. A learned model, such as logistic regression on the exported dataset, could replace it later without touching the API.
+7. **Multiple users.** Everything is keyed by `user_id` (always 1 today), so real accounts can be added without a rewrite.
 
-   Examples:
-   - **Wedding guest:** don't wear white or cream. Dressier than work.
-   - **Funeral:** dark, muted colours, no logos.
-   - **Interview:** one step dressier than the company's everyday wear. Clean shoes.
-   - **Night out in Dublin:** you'll walk between venues and queue outside, so take a jacket you can carry.
-   - **Sport:** breathable fabrics. Bring a layer for afterwards.
-2. **Add occasions students actually have:** debs or ball, college society events, GAA or rugby match as a spectator, festival, gym, travel day, presentation, part-time job. Each needs a formality range and a style guide entry.
-3. **Send the relevant guide entry** to the model in the `requirements` block of `pick_messages()`. Tell the prompt to follow it and to say in the explanation which guide point it applied.
-4. **Add colour and combination rules** to the guide:
-   - at most one bold colour or pattern;
-   - neutrals go with everything;
-   - match the formality of shoes and top;
-   - match leather colours where the user cares.
-5. **Ask instead of guessing.** When the dress code is unclear, for example "a wedding" with no dress code, use the existing `needs_clarification` field to ask one question. Keep the rule: "do not guess".
+## Daily casual fit + morning notification (backend built)
 
-### Stage 2: richer context per request
-1. **Parse more detail** in `ParsedRequest`:
-   - indoor or outdoor;
-   - how long the event lasts;
-   - activity, such as standing, dancing or walking a lot;
-   - time of day;
-   - an explicit dress code.
-2. **Use weather across the event's hours**, not only the start hour. A 7pm to 2am night out gets much colder by the end.
-3. **Pass the item features the model needs** to judge combinations: colours, material, pattern, fit, and formality per item. Fill these in through the Review screen.
+Every day there is a ready-made casual outfit, and optionally a browser notification each morning at a time the user picks.
 
-### Stage 3: learn each user's taste (personalisation without training)
-1. **Record signals.** Add a small `StyleSignal` table (`user_id`, `kind`, `item_id`, `outfit_id`, `occasion`, `created_at`). New tables are created on startup by `init_db()` in `db.py`, so no reset is needed. Record:
-   - thumbs up or down;
-   - each swap, as the item rejected and the item chosen;
-   - outfits actually worn;
-   - items that are always available but never picked;
-   - edits the user makes in Review.
-2. **Build a style profile per user** from those signals. Keep it as plain data, recomputed after each signal:
-   - favourite and avoided colours;
-   - items they love or never wear;
-   - whether they lean dressier or more relaxed than the default for each occasion;
-   - combinations they've liked.
-3. **Give the model the profile.** Add a short profile summary and two or three past outfits the user liked for the same occasion to `pick_messages()`, as examples. The model then adapts to that user straight away, with no training run. It's cheap, and it switches off cleanly by leaving the profile out.
-4. **Keep the guardrails.** The profile may change the model's choice within the candidates, never the rules. Weather and formality filters still run first, and every returned ID is still validated. Don't infer body shape or gender. Ask about preferences instead, or let the user set them on a small "My style" screen.
+**How it works.** `services/daily.py` builds today's request in code: casual, from 9am, 10 hours, walking, at the user's location or Dublin. It runs the normal pipeline: whole-day weather, rules, the user's taste, the AI stylist, then validation and the fallback. That costs one AI call a day.
+- **"Another option"** avoids the pieces already suggested today.
+- **Variety.** Yesterday's main pieces are avoided too, so the week doesn't repeat.
+- **Saved as outfits.** Daily outfits are `Outfit` rows with `kind="daily"` and `for_date`. Swap, wear and feedback use the normal `/api/outfits/{id}/…` endpoints, so they teach the taste profile too.
 
-### Stage 4: measure before and after each change
-1. **Write `scripts/check_outfits.py`**, built like `check_extraction.py`. Use a fixed set of about 30 scenarios: occasion, weather and wardrobe, with the expected picks or must-avoid rules. For example: no white at a wedding, waterproof jacket in rain, no suede in rain.
-2. **Score each change with code checks first**, such as formality range, weather and must-avoid rules. Optionally, have a second model on OpenRouter grade appropriateness from 1 to 5 against the style guide.
-3. **Track the thumbs-up rate and the swap rate** for each prompt version on the AI log page. Keep a prompt change only if those numbers improve.
+**Notifications.** These are real browser push notifications (Web Push with VAPID), so no third-party account is needed.
+- The VAPID keys are already generated in this machine's `backend/.env`. On a new machine, run `python scripts/make_vapid_keys.py` once. It refuses to overwrite existing keys, because that would break every subscribed browser.
+- `services/scheduler.py` checks once a minute. It sends at most one notification a day, and it records the date it sent, so restarts never send twice.
+- If the computer was asleep at notification time, it still sends within 3 hours. If the user switches notifications on after that window, they start tomorrow.
+- Expired browser subscriptions are removed automatically.
+- Turn the scheduler off with `DAILY_SCHEDULER_ENABLED=false`.
+- Set `VAPID_SUBJECT` to a real team contact address before any deployment.
 
-### Stage 5: actual training (later; needs a team decision)
-- **OpenRouter serves models but, as far as we know, doesn't offer fine-tuning.** Check this before planning around it. Fine-tuning would mean calling a provider directly, which breaks the "OpenRouter only" rule in `CLAUDE.md`. That rule would have to change first.
-- **A cheaper "trained" option that keeps the rule:** a small local re-ranker trained on each user's signals. For example, a logistic regression on item features and occasion that predicts thumbs up. It orders the candidates before the model sees them. It runs locally, costs nothing per call, and is genuinely per user.
-- **Start collecting the dataset now.** Store context, candidates, pick and feedback as JSONL rows from the `StyleSignal` and `Outfit` tables. Never include email content or personal data. Get the user's consent before any data leaves the machine.
-- **Multiple users.** Today there is one demo user (`User` id 1) and no login. Key everything by `user_id` from the start, so adding real accounts later doesn't mean a rewrite.
+**API**
+
+| Method and path | What it does |
+|---|---|
+| `GET /api/daily` | Today's fit, created on the first request of the day, plus the settings |
+| `POST /api/daily/another` | A different fit for today |
+| `GET /api/daily/settings` | `{enabled, time, location, push_configured, subscriptions, last_sent_date}` |
+| `PUT /api/daily/settings` | Body `{enabled, time: "HH:MM", location}`, in Dublin time |
+| `GET /api/push/config` | `{configured, public_key}`, the public key the browser needs to subscribe |
+| `POST /api/push/subscribe` | Body is the browser's `PushSubscription.toJSON()` |
+| `POST /api/push/unsubscribe` | Body `{endpoint}` |
+| `POST /api/push/test` | Sends today's fit to every subscribed browser now |
+
+**Verified in mock mode:**
+- today's fit is created once and repeats on the second visit;
+- "another option" changes the main pieces;
+- an invalid time is rejected;
+- the scheduler is not due before the set time, sends once at that time, and not again that day;
+- there is no catch-up after 3 hours, and it's due again the next day;
+- a real VAPID-signed, encrypted push was accepted by a test endpoint;
+- an expired subscription (410) is removed.
+
+**The frontend still needs to be built.** The backend is complete and the current UI doesn't use it yet. It needs:
+1. **A service worker** at `/sw.js`, placed in `frontend/public/`. On `push`, it shows `{title, body}` from the JSON payload. On `notificationclick`, it opens `data.url`, which is `/plan?daily=1`.
+2. **Subscribing.** Request `Notification` permission, call `pushManager.subscribe({userVisibleOnly: true, applicationServerKey: <public_key from /api/push/config, base64url-decoded>})`, then POST the result to `/api/push/subscribe` and `PUT /api/daily/settings` with `enabled: true`.
+3. **A "Today's casual fit" card**, on the Plan page or home. Show `GET /api/daily` with the existing `OutfitCard`, plus an "Another option" button, a notification switch, a time picker and "Send a test".
+4. **Unsubscribing.** Call `subscription.unsubscribe()`, then POST `/api/push/unsubscribe` and `PUT` settings with `enabled: false`.
+5. **Browser support.** Push works in Chrome, Edge and Firefox on `localhost`. On iPhone, it only works once the site is added to the Home Screen, which needs https in production.
 
 ## Done on this branch
 
@@ -125,10 +132,16 @@ The model can't be trusted to "just know" what suits an event. It needs the cont
 | Real-model extraction check against the expected answers | `scripts/check_extraction.py` |
 | Windows fixes: `tzdata` for Europe/Dublin; frontend proxy to `127.0.0.1:8000` | `requirements.txt`, `frontend/vite.config.ts` |
 | README: Windows setup section, new scripts and endpoint | `README.md` |
+| Event style guide, 6 new occasions, colour rules, no white dress at weddings, whole-event weather | `services/rules.py`, `services/weather.py`, `app/ai/prompts.py` |
+| Richer requests (setting, duration, activity) from the AI and keyword parsers | `schemas.py`, `services/request_rules.py` |
+| Taste learning from thumbs, swaps and worn outfits; stated preferences | `services/style_profile.py`, `routers/style.py`, `StyleSignal` table |
+| Daily casual fit, scheduler and Web Push notifications | `services/daily.py`, `services/scheduler.py`, `services/push.py`, `routers/daily.py`, `routers/push.py` |
+| Outfit scenario checker, dataset export, VAPID key script | `scripts/check_outfits.py`, `scripts/export_style_dataset.py`, `scripts/make_vapid_keys.py` |
 
 API change: `POST /api/ingest/email` and `POST /api/ingest/samples` now return `202` with a job. Poll `GET /api/ingest/jobs/{id}` for progress and the summary. The frontend is already updated.
 
 ## Verified (mock AI mode)
+- **New features: 37 of 37 checks passed.** They cover the new occasions, the wedding colour rule, the style guide in the prompt, taste learning, the daily fit, the scheduler and push. `check_outfits.py --mock` scores 28 of 28. The original 68-check smoke test still passes.
 - **Smoke test, 68 of 68 checks passed.** It covers wardrobe CRUD and laundry, photos and the Review queue (duplicates, merge, non-clothing, AI down, HEIC), the free limit, and outfits for 4 occasions. It also covers rain rules, invalid AI picks, AI down and swap/wear. Stripe was tested with locally signed webhooks: bad signature, unpaid and triple delivery. It also covers all 18 sample emails, re-import, the injection email, Gmail without keys, and the debug pages. It ran on an in-memory database copy and isn't committed, because `CLAUDE.md` says no test suite.
 - **Frontend:** `npx tsc --noEmit` passes, `npm run build` succeeds, and every route loads.
 
