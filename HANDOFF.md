@@ -8,6 +8,27 @@ Read `CLAUDE.md` (project rules) and `PLAN.md` (phased spec) first. This file sa
 
 All 8 phases in `PLAN.md` are built, plus event-aware and personalised outfit picks, and a daily outfit planned from Google Calendar, the weather and your laundry, sent as a notification the night before (backend only; see the sections below). Every backend gap that could be closed without API keys is closed. The whole app passes a 68-check end-to-end smoke test in **mock AI mode**. **Nothing has run against real OpenRouter, Stripe or Google yet**, because no keys were available. The remaining work is: add the keys, verify each integration for real, and fix whatever that turns up.
 
+## Frontend still to build (start here)
+
+**The newest backend features have no UI yet.** The backend APIs are finished and tested. The current React app doesn't call them, so users can't see these features until the frontend below is built. Everything older, such as the wardrobe, photos, Review, planning, laundry, Pro and order import, already has a UI.
+
+| # | Build this | Backend it uses | Details |
+|---|---|---|---|
+| 1 | **Service worker** `frontend/public/sw.js`: show the push `{title, body}` and open `data.url` when the notification is tapped | Web Push payload | Daily outfit section, "The frontend still needs to be built" |
+| 2 | **Notification settings**: a "Night before" switch with a time picker (default 20:00), an optional "Morning" switch with a time picker, and a "Send a test" button. A switch asks permission, subscribes the browser, then saves the settings | `GET /api/push/config`, `POST /api/push/subscribe` and `/unsubscribe`, `PUT /api/daily/settings`, `POST /api/push/test` | Same section |
+| 3 | **"Tomorrow" / "Today" outfit card**: the outfit (reuse `OutfitCard`), the day's events, the notices (packing and laundry tips) and an "Another option" button. Open it from `/plan?daily=tomorrow` | `GET /api/daily?day=…`, `POST /api/daily/another?day=…` | Same section |
+| 4 | **"Connect Google Calendar" button**, plus handling `?calendar=connected\|cancelled\|error` on return, and a Disconnect button | `/api/calendar/status`, `/auth-url`, `/disconnect` | "Human step: connect Google Calendar" |
+| 5 | **"My style" screen**: favourite colours, colours to avoid, notes, and what was learned | `PUT /api/style/preferences`, `GET /api/style/profile` | Outfits section, "Still to do" |
+| 6 | **Labels for the new occasions** (debs, society, match, festival, travel, presentation) in `OCCASION_LABELS` | `frontend/src/lib/format.ts` | Without them the UI shows raw keys like `night_out` |
+| 7 | **Whole-event weather on the outfit card**: "down to X° later" from `temperature_min_c`, the rain chance from `precipitation_probability_max`, and "rain from HH:MM" | `WeatherOut` fields | Outfits section |
+| 8 | **Demo calendar controls** on the AI log page, to fake tomorrow's events for a demo | `GET/POST /api/debug/demo-calendar` | "Demo without Google" |
+
+**Notes for whoever builds it:**
+- **Keep the types in sync.** Add the new response types to `frontend/src/api/types.ts`: `DailyResponse`, `DailySettingsOut`, `DayEventOut`, `PushConfig`, `StylePreferences`, plus the new `Outfit` fields `kind` and `for_date`. Then run `npx tsc --noEmit`.
+- **Settings replace everything.** `PUT /api/daily/settings` is a full replace, so send every field.
+- **Error codes to handle:** `push_not_configured`, `no_subscriptions`, `push_failed`, `calendar_not_configured`, `calendar_error` and `invalid_day`, plus the existing `empty_wardrobe` and `nothing_available`.
+- **Browser support.** Push works on `localhost` in Chrome, Edge and Firefox. On iPhone it only works once the site is added to the Home Screen, which needs https in production.
+
 ## What's left to do
 
 ### 1. Real AI (needs an OpenRouter key)
