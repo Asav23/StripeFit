@@ -64,8 +64,9 @@ def _select(data: Any, mock_input: Any) -> Any:
         return data[_stable_index(mock_input, len(data))]
     if isinstance(data, dict) and "cases" in data:
         text = str(mock_input or "").lower()
-        for case in data["cases"]:
-            if case["match"].lower() in text:
+        for case in data["cases"]:  # "match" is a string or a list of strings that must all appear
+            needles = case["match"] if isinstance(case["match"], list) else [case["match"]]
+            if all(n.lower() in text for n in needles):
                 return case["response"]
         return data["default"]
     return data

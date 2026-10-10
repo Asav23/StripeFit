@@ -38,11 +38,13 @@ ORDER_NUMBER_CONTEXT = re.compile(r"(?i)(order|bestell\w*|invoice|ref\w*|no\.?|n
 
 
 def _phone(match: re.Match[str]) -> str:
-    digits = re.sub(r"\D", "", match.group(0))
+    text = match.group(0)
+    digits = re.sub(r"\D", "", text)
     preceding = match.string[max(0, match.start() - 20) : match.start()]
-    if ORDER_NUMBER_CONTEXT.search(preceding):  # "Order no. 0845120397" is an ID, not a phone
-        return match.group(0)
-    return "[PHONE]" if 9 <= len(digits) <= 15 else match.group(0)
+    # "Order no. 0845120397" is an ID: unspaced, no "+", right after an order label. Spaced numbers are phones.
+    if not text.startswith("+") and not re.search(r"\s", text) and ORDER_NUMBER_CONTEXT.search(preceding):
+        return text
+    return "[PHONE]" if 9 <= len(digits) <= 15 else text
 
 
 def _card(match: re.Match[str]) -> str:

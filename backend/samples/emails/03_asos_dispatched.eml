@@ -1,0 +1,25 @@
+From: ASOS <orders@asos.com>
+To: Aoife Murphy <aoife.murphy@example.com>
+Subject: Your order's on its way!
+Date: Sun, 13 Sep 2026 10:15:00 +0100
+X-StripeFit-Sample: synthetic
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><head><style>td{padding:6px}</style></head><body>
+<img src=3D"https://example.com/logo.png" width=3D"1" height=3D"1" alt=3D"">
+<h1>Your order is on its way</h1>
+<p>Hi Aoife,</p>
+<p>Good news! Order 845120397 has been dispatched with DPD.</p>
+<table><tr><td></td><td><strong>Oversized knitted jumper in cream</strong><br=
+>Size: M</td><td></td></tr><tr><td></td><td><strong>Chuck Taylor All Star Hi =
+trainers in black</strong><br>Size: UK 8</td><td></td></tr></table>
+
+<h3>Delivery address</h3>
+<p>Aoife Murphy<br>Apt 4, 12 Fictional Lane<br>Rialto<br>Dublin 8<br>D08 XY12=
+<br>Ireland</p>
+
+<p>Questions? Call us on +353 87 123 4567 or reply to this email.</p>
+<p style=3D"color:#888"></p>
+</body></html>

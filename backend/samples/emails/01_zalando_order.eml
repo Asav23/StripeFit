@@ -1,0 +1,64 @@
+From: Zalando <info@service-mail.zalando.ie>
+To: Aoife Murphy <aoife.murphy@example.com>
+Subject: Thanks for your order 10293847561
+Date: Mon, 07 Sep 2026 10:15:00 +0100
+X-StripeFit-Sample: synthetic
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============6418467759733304696=="
+
+--===============6418467759733304696==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Thanks for your order!
+
+Hi Aoife,
+
+We've received your order 10293847561 placed on 07/09/2026.
+
+Levi's 501 ORIGINAL FIT - Straight leg jeans - mid blue | Size: W32 L32 | Qty=
+: 1 | =E2=82=AC99.95
+Nike Sportswear AIR FORCE 1 '07 - Trainers - white | Size: 42 | Qty: 1 | =E2=
+=82=AC119.95
+Total: =E2=82=AC219.90   Paid with Visa ending in 4242
+
+Delivery address:
+Aoife Murphy
+Apt 4, 12 Fictional Lane
+Rialto
+Dublin 8
+D08 XY12
+Ireland
+
+Contact number on the order: +353 87 123 4567
+
+--===============6418467759733304696==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><head><style>td{padding:6px}</style></head><body>
+<img src=3D"https://example.com/logo.png" width=3D"1" height=3D"1" alt=3D"">
+<h1>Thanks for your order!</h1>
+<p>Hi Aoife,</p>
+<p>We've received your order <b>10293847561</b> placed on 07/09/2026.</p>
+<table><tr><td><img src=3D"https://example.com/zalando/levis-501-mid-blue.jpg=
+" alt=3D"Levi's 501 ORIGINAL FIT - Straight leg jeans" width=3D"96" height=3D=
+"96"></td><td><strong>Levi's 501 ORIGINAL FIT - Straight leg jeans</strong><b=
+r>Colour: mid blue =C2=B7 Size: W32 L32 =C2=B7 Qty: 1</td><td>=E2=82=AC99.95<=
+/td></tr><tr><td><img src=3D"https://example.com/zalando/nike-af1-white.jpg" =
+alt=3D"Nike Sportswear AIR FORCE 1 '07 - Trainers" width=3D"96" height=3D"96"=
+></td><td><strong>Nike Sportswear AIR FORCE 1 '07 - Trainers</strong><br>Colo=
+ur: white =C2=B7 Size: 42 =C2=B7 Qty: 1</td><td>=E2=82=AC119.95</td></tr></ta=
+ble>
+<p>Total: =E2=82=AC219.90 =C2=B7 Paid with Visa ending in 4242</p>
+<h3>Delivery address</h3>
+<p>Aoife Murphy<br>Apt 4, 12 Fictional Lane<br>Rialto<br>Dublin 8<br>D08 XY12=
+<br>Ireland</p>
+
+<p>Questions? Call us on +353 87 123 4567 or reply to this email.</p>
+<p style=3D"color:#888"></p>
+</body></html>
+
+--===============6418467759733304696==--

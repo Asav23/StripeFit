@@ -1,0 +1,27 @@
+From: ASOS <orders@asos.com>
+To: Aoife Murphy <aoife.murphy@example.com>
+Subject: Your order has been delivered
+Date: Tue, 15 Sep 2026 10:15:00 +0100
+X-StripeFit-Sample: synthetic
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+Delivered!
+
+Hi Aoife,
+
+Your parcel for order 845120397 has been delivered.
+
+- Oversized knitted jumper in cream (M)
+- Chuck Taylor All Star Hi trainers in black (UK 8)
+
+Delivery address:
+Aoife Murphy
+Apt 4, 12 Fictional Lane
+Rialto
+Dublin 8
+D08 XY12
+Ireland
+
+Contact number on the order: +353 87 123 4567

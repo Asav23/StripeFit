@@ -1,0 +1,619 @@
+{
+ "_comment": "Mock extraction per sample email (matched on order ID + a phrase). Unknown emails -> 'other'.",
+ "cases": [
+  {
+   "match": [
+    "10293847561",
+    "refund"
+   ],
+   "response": {
+    "email_type": "refund",
+    "retailer": "Zalando",
+    "order_id": "10293847561",
+    "currency": "EUR",
+    "order_date": "2026-09-25",
+    "items": [
+     {
+      "name": "Nike Sportswear Air Force 1 '07",
+      "category": "shoes",
+      "colours": [
+       "white"
+      ],
+      "size": "42",
+      "quantity": 1,
+      "price": 119.95,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.9
+   }
+  },
+  {
+   "match": [
+    "10293847561"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "Zalando",
+    "order_id": "10293847561",
+    "currency": "EUR",
+    "order_date": "2026-09-07",
+    "items": [
+     {
+      "name": "Levi's 501 Original Fit straight leg jeans",
+      "category": "bottom",
+      "colours": [
+       "mid blue"
+      ],
+      "size": "W32 L32",
+      "quantity": 1,
+      "price": 99.95,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": "https://example.com/zalando/levis-501-mid-blue.jpg",
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Nike Sportswear Air Force 1 '07 trainers",
+      "category": "shoes",
+      "colours": [
+       "white"
+      ],
+      "size": "42",
+      "quantity": 1,
+      "price": 119.95,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": "https://example.com/zalando/nike-af1-white.jpg",
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.95
+   }
+  },
+  {
+   "match": [
+    "845120397",
+    "has been delivered"
+   ],
+   "response": {
+    "email_type": "delivery",
+    "retailer": "ASOS",
+    "order_id": "845120397",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Oversized knitted jumper in cream",
+      "category": "top",
+      "colours": [
+       "cream"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     },
+     {
+      "name": "Chuck Taylor All Star Hi trainers in black",
+      "category": "shoes",
+      "colours": [
+       "black"
+      ],
+      "size": "UK 8",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.9
+   }
+  },
+  {
+   "match": [
+    "845120397",
+    "has been dispatched"
+   ],
+   "response": {
+    "email_type": "dispatch",
+    "retailer": "ASOS",
+    "order_id": "845120397",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Oversized knitted jumper in cream",
+      "category": "top",
+      "colours": [
+       "cream"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     },
+     {
+      "name": "Chuck Taylor All Star Hi trainers in black",
+      "category": "shoes",
+      "colours": [
+       "black"
+      ],
+      "size": "UK 8",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.9
+   }
+  },
+  {
+   "match": [
+    "845120397"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "ASOS",
+    "order_id": "845120397",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "ASOS DESIGN oversized knitted jumper in cream",
+      "category": "top",
+      "colours": [
+       "cream"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": 38.0,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Converse Chuck Taylor All Star Hi canvas trainers in black",
+      "category": "shoes",
+      "colours": [
+       "black"
+      ],
+      "size": "UK 8",
+      "quantity": 1,
+      "price": 75.0,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.93
+   }
+  },
+  {
+   "match": [
+    "70912345678",
+    "parcel"
+   ],
+   "response": {
+    "email_type": "dispatch",
+    "retailer": "H&M",
+    "order_id": "70912345678",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Ribbed tank top",
+      "category": "top",
+      "colours": [
+       "black"
+      ],
+      "size": "S",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     },
+     {
+      "name": "Wide-leg linen-blend trousers",
+      "category": "bottom",
+      "colours": [
+       "beige"
+      ],
+      "size": "38",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.88
+   }
+  },
+  {
+   "match": [
+    "70912345678"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "H&M",
+    "order_id": "70912345678",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Ribbed tank top",
+      "category": "top",
+      "colours": [
+       "black"
+      ],
+      "size": "S",
+      "quantity": 1,
+      "price": 9.99,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Wide-leg linen-blend trousers",
+      "category": "bottom",
+      "colours": [
+       "beige"
+      ],
+      "size": "38",
+      "quantity": 1,
+      "price": 34.99,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Oversized denim jacket",
+      "category": "outerwear",
+      "colours": [
+       "light blue"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": 44.99,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.94
+   }
+  },
+  {
+   "match": [
+    "2026092612345",
+    "exchange"
+   ],
+   "response": {
+    "email_type": "exchange",
+    "retailer": "UNIQLO",
+    "order_id": "2026092612345",
+    "currency": "EUR",
+    "order_date": "2026-10-02",
+    "items": [
+     {
+      "name": "Oxford Slim-Fit Long-Sleeve Shirt",
+      "category": "top",
+      "colours": [
+       "blue"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "unknown",
+      "exchange_role": "old"
+     },
+     {
+      "name": "Oxford Slim-Fit Long-Sleeve Shirt",
+      "category": "top",
+      "colours": [
+       "blue"
+      ],
+      "size": "L",
+      "quantity": 1,
+      "price": null,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": "new"
+     }
+    ],
+    "confidence": 0.9
+   }
+  },
+  {
+   "match": [
+    "2026092612345"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "UNIQLO",
+    "order_id": "2026092612345",
+    "currency": "EUR",
+    "order_date": "2026-09-26",
+    "items": [
+     {
+      "name": "U Crew Neck Short-Sleeve T-Shirt",
+      "category": "top",
+      "colours": [
+       "white"
+      ],
+      "size": "M",
+      "quantity": 2,
+      "price": 14.9,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Oxford Slim-Fit Long-Sleeve Shirt",
+      "category": "top",
+      "colours": [
+       "blue"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": 29.9,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.95
+   }
+  },
+  {
+   "match": [
+    "N7718823"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "Next",
+    "order_id": "N7718823",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Yellow Waterproof Raincoat (3-16yrs)",
+      "category": "outerwear",
+      "colours": [
+       "yellow"
+      ],
+      "size": "Age 7-8 years",
+      "quantity": 1,
+      "price": 28.0,
+      "is_clothing": true,
+      "likely_for": "child",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Stone Slim Fit Stretch Chinos",
+      "category": "bottom",
+      "colours": [
+       "stone"
+      ],
+      "size": "32S",
+      "quantity": 1,
+      "price": 30.0,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Lime, Basil & Mandarin Reed Diffuser 170ml",
+      "category": "unknown",
+      "colours": [
+       "unknown"
+      ],
+      "size": null,
+      "quantity": 1,
+      "price": 16.0,
+      "is_clothing": false,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.9
+   }
+  },
+  {
+   "match": [
+    "AR-0047821"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "Arnotts",
+    "order_id": "AR-0047821",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Grey cashmere-blend scarf",
+      "category": "accessory",
+      "colours": [
+       "grey"
+      ],
+      "size": "One size",
+      "quantity": 1,
+      "price": 65.0,
+      "is_clothing": true,
+      "likely_for": "gift",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.88
+   }
+  },
+  {
+   "match": [
+    "10388811230"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "Zalando",
+    "order_id": "10388811230",
+    "currency": "EUR",
+    "order_date": "2026-10-05",
+    "items": [
+     {
+      "name": "Wool coat",
+      "category": "outerwear",
+      "colours": [
+       "black"
+      ],
+      "size": "M",
+      "quantity": 1,
+      "price": 149.95,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     },
+     {
+      "name": "Suede Chelsea boots",
+      "category": "shoes",
+      "colours": [
+       "brown"
+      ],
+      "size": "43",
+      "quantity": 1,
+      "price": 89.95,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.9
+   }
+  },
+  {
+   "match": [
+    "BH55120934"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "boohoo",
+    "order_id": "BH55120934",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Going Out Top",
+      "category": "top",
+      "colours": [
+       "unknown"
+      ],
+      "size": "10",
+      "quantity": 1,
+      "price": 22.0,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.7
+   }
+  },
+  {
+   "match": [
+    "SCH-3381207"
+   ],
+   "response": {
+    "email_type": "order_confirmation",
+    "retailer": "schuh",
+    "order_id": "SCH-3381207",
+    "currency": "EUR",
+    "order_date": null,
+    "items": [
+     {
+      "name": "Dr. Martens 1460 Smooth Leather Lace Up Boots",
+      "category": "shoes",
+      "colours": [
+       "black"
+      ],
+      "size": "UK 6",
+      "quantity": 1,
+      "price": 189.99,
+      "is_clothing": true,
+      "likely_for": "me",
+      "image_url": null,
+      "status_hint": "kept",
+      "exchange_role": null
+     }
+    ],
+    "confidence": 0.9
+   }
+  }
+ ],
+ "default": {
+  "email_type": "other",
+  "retailer": null,
+  "order_id": null,
+  "currency": null,
+  "order_date": null,
+  "items": [],
+  "confidence": 0.3
+ }
+}

@@ -1,0 +1,28 @@
+From: Next <orders@email.next.co.uk>
+To: Aoife Murphy <aoife.murphy@example.com>
+Subject: Your Next order confirmation - Order No. N7718823
+Date: Mon, 28 Sep 2026 10:15:00 +0100
+X-StripeFit-Sample: synthetic
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><head><style>td{padding:6px}</style></head><body>
+<img src=3D"https://example.com/logo.png" width=3D"1" height=3D"1" alt=3D"">
+<h1>Thanks for your order</h1>
+<p>Hi Aoife,</p>
+<p>Order No. N7718823</p>
+<table><tr><td></td><td><strong>Yellow Waterproof Raincoat (3-16yrs)</strong>=
+<br>Size: Age 7-8 years =C2=B7 Qty 1</td><td>=E2=82=AC28.00</td></tr><tr><td>=
+</td><td><strong>Stone Slim Fit Stretch Chinos</strong><br>Size: 32S =C2=B7 Q=
+ty 1</td><td>=E2=82=AC30.00</td></tr><tr><td></td><td><strong>Lime, Basil & M=
+andarin Reed Diffuser 170ml</strong><br>Qty 1</td><td>=E2=82=AC16.00</td></tr=
+></table>
+
+<h3>Delivery address</h3>
+<p>Aoife Murphy<br>Apt 4, 12 Fictional Lane<br>Rialto<br>Dublin 8<br>D08 XY12=
+<br>Ireland</p>
+
+<p>Questions? Call us on +353 87 123 4567 or reply to this email.</p>
+<p style=3D"color:#888"></p>
+</body></html>

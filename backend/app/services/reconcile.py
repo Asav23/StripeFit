@@ -2,7 +2,7 @@
 
 Every order line has a key `retailer|order_id|normalised_name|size` (Item.source_ref).
   order_confirmation -> one pending item per unit (status on_the_way), skipping what already exists
-  dispatch           -> match existing items; create them only if we never saw the confirmation
+  dispatch           -> match existing items (no change); create them only if we never saw the confirmation
   delivery           -> matched items become available
   refund/return/cancellation -> matched items become returned (pending ones are dismissed)
   exchange           -> "old" lines returned, "new" lines added
@@ -130,8 +130,6 @@ def apply(session: Session, extraction: OrderExtraction, retailer: str, order_id
                     item.status = "available"
                     session.add(item)
                     result.updated += 1
-        elif kind == "dispatch":
-            result.updated += len(matches)  # already known and on the way: nothing to change
 
         # Create only the units we haven't seen (dismissed/returned ones count, so nothing comes back).
         status = "available" if kind == "delivery" else "on_the_way"
@@ -148,7 +146,7 @@ def _mark_returned(session: Session, matches: list[Item], quantity: int, result:
                    count_skip: bool = True) -> None:
     live = [i for i in matches if i.status != "returned" and not i.dismissed]
     live.sort(key=lambda i: i.confirmed)  # pending units go first
-    if not live and count_skip:
+    if not matches and count_skip:  # (matches that are all returned already = a re-import: nothing to say)
         result.skipped.append("no matching item to return")
     for item in live[:quantity]:
         item.status = "returned"
