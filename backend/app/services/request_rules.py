@@ -43,6 +43,8 @@ DRESS_CODES = ["black tie", "smart casual", "business casual", "cocktail", "form
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 NOT_PLACES = set(WEEKDAYS) | {"january", "february", "march", "april", "may", "june", "july", "august",
                               "september", "october", "november", "december", "the", "my"}
+# Capitalised words that end a place name rather than belong to it ("Temple Bar Saturday" -> "Temple Bar").
+TIME_WORDS = NOT_PLACES | {"today", "tonight", "tomorrow", "next", "this", "morning", "afternoon", "evening", "noon"}
 
 
 def _has(text: str, phrase: str) -> bool:
@@ -98,7 +100,12 @@ def _resolve_time(text: str, occasion: str, now: datetime) -> datetime:
 def _destination(original: str) -> str | None:
     pattern = r"\b(?:in|at|to|near|around)\s+((?:[A-Z][\w'’-]*)(?:\s+(?:[A-Z][\w'’-]*|of|the))*)"
     for match in re.finditer(pattern, original):
-        place = re.sub(r"\s+(of|the)$", "", match.group(1)).strip()
+        words = match.group(1).split()
+        while words and words[-1].lower() in TIME_WORDS:
+            words.pop()
+        place = re.sub(r"\s+(of|the)$", "", " ".join(words)).strip()
+        if not place:
+            continue
         if place.lower() not in NOT_PLACES:
             return place
     return None
