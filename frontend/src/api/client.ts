@@ -110,6 +110,12 @@ export const api = {
   gmailImport: (months: number) => request<{ started: boolean; job: GmailJob }>("/api/gmail/import", json("POST", { months })),
   gmailImportStatus: () => request<GmailJob>("/api/gmail/import/status"),
 
-  // debug
+  // debug / demo controls
   aiCalls: () => request<AICallLog>("/api/debug/ai-calls"),
+  weatherOverride: () => request<{ preset: string | null; presets: string[] }>("/api/debug/weather-override"),
+  setWeatherOverride: (preset: string | null) =>
+    request<{ preset: string | null }>("/api/debug/weather-override", json("POST", { preset })),
+  mockOverrides: () => request<{ overrides: Record<string, string> }>("/api/debug/mock-override"),
+  setMockOverride: (task: string, variant: string | null) =>
+    request<{ overrides: Record<string, string> }>("/api/debug/mock-override", json("POST", { task, variant })),
 };

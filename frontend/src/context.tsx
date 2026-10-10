@@ -78,6 +78,7 @@ interface MeApi {
 }
 
 const MeContext = createContext<MeApi | null>(null);
+const RETRY_MS = 4000;
 
 export function MeProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
@@ -95,6 +96,13 @@ export function MeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // If the API was unreachable (e.g. restarting), keep retrying quietly until it's back.
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setInterval(() => void refresh(), RETRY_MS);
+    return () => window.clearInterval(timer);
+  }, [error, refresh]);
 
   return <MeContext.Provider value={{ me, error, refresh }}>{children}</MeContext.Provider>;
 }

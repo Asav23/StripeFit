@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { AICallLog } from "../api/types";
+import DemoControls from "../components/DemoControls";
 import { RefreshIcon } from "../components/Icons";
 import { EmptyState, Notice, Skeleton } from "../components/ui";
 import { formatDateTime } from "../lib/format";
@@ -40,6 +41,7 @@ export default function AiLogPage() {
       {log && (
         <>
           {log.mock_ai && <Notice tone="warn">Mock AI is on: calls are simulated and cost nothing.</Notice>}
+          <DemoControls mockAi={log.mock_ai} />
           <div className="grid grid-cols-4 gap-2 text-center">
             {[
               ["Calls", log.totals.count],

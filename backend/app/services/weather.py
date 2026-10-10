@@ -110,14 +110,14 @@ def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | 
         times = [datetime.fromisoformat(t).replace(tzinfo=tz) for t in hourly["time"]]
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         log.warning("Forecast failed: %s", exc)
-        return None, notices + [NO_FORECAST]
+        return None, [NO_FORECAST]  # the location notice is moot without a forecast
     if not times:
-        return None, notices + [NO_FORECAST]
+        return None, [NO_FORECAST]  # the location notice is moot without a forecast
 
     i = min(range(len(times)), key=lambda k: abs(times[k] - when))
     temp = hourly["temperature_2m"][i]
     if temp is None:
-        return None, notices + [NO_FORECAST]
+        return None, [NO_FORECAST]  # the location notice is moot without a forecast
     rain_prob = hourly["precipitation_probability"][i]
     rain_mm = hourly["precipitation"][i]
     code = hourly["weather_code"][i]
