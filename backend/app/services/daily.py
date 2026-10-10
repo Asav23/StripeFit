@@ -172,7 +172,7 @@ def settings_out(session: Session) -> DailySettingsOut:
         evening_enabled=user.evening_enabled, evening_time=user.evening_time,
         push_configured=push.configured(), subscriptions=push.count(session),
         last_sent_date=user.daily_last_sent, evening_last_sent=user.evening_last_sent,
-        calendar_connected=google_calendar.connected(),
+        calendar_connected=google_calendar.source() in ("google", "link"),
     )
 
 

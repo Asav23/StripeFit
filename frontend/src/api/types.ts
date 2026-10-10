@@ -148,9 +148,11 @@ export interface DailyResponse {
 }
 
 export interface CalendarStatus {
-  configured: boolean;
-  connected: boolean;
+  configured: boolean; // Google sign-in is set up on the server
+  connected: boolean; // signed in with Google
+  link: boolean; // a private iCal link is saved
   demo: boolean;
+  source: "demo" | "google" | "link" | null; // what the planner uses
 }
 
 export interface PushConfig {

@@ -189,13 +189,27 @@ def parse_raw(raw: list[dict[str, Any]], day: date) -> list[DayEvent]:
     return sorted(events, key=lambda ev: ev.start)
 
 
+def source() -> Optional[str]:
+    """Where the day planner's events come from: "demo" | "google" | "link" | None."""
+    from app.services import ical_calendar  # local import: ical_calendar imports this module
+
+    if DEMO_EVENTS is not None:
+        return "demo"
+    if connected():
+        return "google"
+    return "link" if ical_calendar.connected() else None
+
+
 def events_for(day: date) -> tuple[list[DayEvent], Optional[str]]:
-    """(events, notice). Never raises: no calendar -> no events; a Google error -> no events + a notice."""
+    """(events, notice). Never raises: no calendar -> no events; an error -> no events + a notice.
+    Priority: demo events, then the Google sign-in, then a private iCal link (services/ical_calendar.py)."""
+    from app.services import ical_calendar
+
     if DEMO_EVENTS is not None:
         return _demo_events(day), None
     creds = credentials()
     if creds is None:
-        return [], None
+        return ical_calendar.events_for(day) if ical_calendar.connected() else ([], None)
     key = day.isoformat()
     hit = _cache.get(key)
     if hit and time.time() - hit[0] < CACHE_SECONDS:

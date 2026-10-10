@@ -17,4 +17,6 @@ imagehash>=4.3
 pypdf>=4.3
 pillow-heif>=0.18  # optional: iPhone HEIC photos
 pywebpush>=2.0  # morning outfit notifications (Web Push)
+icalendar>=6.0  # private calendar links (.ics)
+recurring-ical-events>=3.0  # expands repeating events
 tzdata  # time zone data on Windows, which has no system tz database

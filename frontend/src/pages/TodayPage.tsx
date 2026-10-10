@@ -38,7 +38,7 @@ function DayEvents({ events, mainOccasion, connected, demo }: { events: DayEvent
     return (
       <p className="flex items-center gap-2 text-[13px] text-ink-2">
         <CalendarDays className="h-4 w-4 text-muted" />
-        {connected || demo ? "Nothing on your calendar, so it's a casual day." : "A casual day. Connect Google Calendar to plan around your events."}
+        {connected || demo ? "Nothing on your calendar, so it's a casual day." : "A casual day. Link your calendar to plan outfits around your events."}
       </p>
     );
   }
@@ -167,7 +167,7 @@ export default function TodayPage() {
           )}
 
           {data && calendar && (
-            <DayEvents events={data.events} mainOccasion={data.outfit.parsed.occasion} connected={calendar.connected} demo={calendar.demo} />
+            <DayEvents events={data.events} mainOccasion={data.outfit.parsed.occasion} connected={calendar.source === "google" || calendar.source === "link"} demo={calendar.demo} />
           )}
 
           {blocker && (

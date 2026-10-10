@@ -5,11 +5,12 @@ from typing import Any, Optional
 
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.errors import api_error
 from app.schemas import DayEventOut
-from app.services import daily, google_calendar
+from app.services import daily, google_calendar, ical_calendar
 
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 log = logging.getLogger("stripefit.calendar")
@@ -23,8 +24,30 @@ def _require_configured() -> None:
 
 @router.get("/status")
 def status() -> dict[str, Any]:
+    """configured/connected = the Google sign-in; link = a private iCal link is saved; source = what's used."""
     return {"configured": settings.gmail_configured, "connected": google_calendar.connected(),
-            "demo": google_calendar.DEMO_EVENTS is not None}
+            "link": ical_calendar.connected(), "demo": google_calendar.DEMO_EVENTS is not None,
+            "source": google_calendar.source()}
+
+
+class CalendarLink(BaseModel):
+    url: str = Field(min_length=10, max_length=600)
+
+
+@router.put("/link")
+def save_link(body: CalendarLink) -> dict[str, Any]:
+    """Use a private iCal link instead of the Google sign-in. The link is checked before it's saved."""
+    try:
+        count = ical_calendar.save_link(body.url)
+    except ical_calendar.BadLink as exc:
+        raise api_error(422, "invalid_calendar_link", str(exc), "Copy the secret iCal address again and paste it here.")
+    return {"link": True, "events": count}
+
+
+@router.delete("/link")
+def remove_link() -> dict[str, bool]:
+    ical_calendar.remove_link()
+    return {"link": False}
 
 
 @router.get("/auth-url")

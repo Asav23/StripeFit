@@ -15,6 +15,7 @@ GMAIL_TOKEN_PATH = BACKEND_DIR / ".gmail_token.json"
 GMAIL_PENDING_PATH = BACKEND_DIR / ".gmail_oauth_pending.json"  # in-flight sign-ins (PKCE), survives reloads
 CALENDAR_TOKEN_PATH = BACKEND_DIR / ".calendar_token.json"  # separate from Gmail: its own read-only scope
 CALENDAR_PENDING_PATH = BACKEND_DIR / ".calendar_oauth_pending.json"
+CALENDAR_ICAL_PATH = BACKEND_DIR / ".calendar_ical_url"  # private iCal link: a secret, kept out of git and the DB
 MOCKS_DIR = Path(__file__).resolve().parent / "ai" / "mocks"
 
 

@@ -124,6 +124,8 @@ export const api = {
   calendarStatus: () => request<CalendarStatus>("/api/calendar/status"),
   calendarAuthUrl: () => request<{ url: string }>("/api/calendar/auth-url"),
   calendarDisconnect: () => request<{ connected: boolean }>("/api/calendar/disconnect", json("POST")),
+  calendarSaveLink: (url: string) => request<{ link: boolean; events: number }>("/api/calendar/link", json("PUT", { url })),
+  calendarRemoveLink: () => request<{ link: boolean }>("/api/calendar/link", { method: "DELETE" }),
   calendarEvents: (day: Day) => request<DayEvent[]>(`/api/calendar/events?day=${day}`),
 
   // personal style
