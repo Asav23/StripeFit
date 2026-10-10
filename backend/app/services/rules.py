@@ -5,7 +5,7 @@ groups them into slots, and records gaps. The AI only ever chooses from its outp
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from app.models import Item
 
@@ -21,6 +21,11 @@ DRESS_CODE_FORMALITY: dict[str, tuple[int, int]] = {
 }
 NULL_FORMALITY_OK = {"casual", "uni", "other"}  # unlabelled formality is only risky for dressy occasions
 FORMAL_OCCASIONS = {"interview", "wedding", "funeral", "work"}
+OUTERWEAR_FORMALITY_SLACK = 1  # a coat goes over the outfit, so it may be one step off the range
+OCCASION_PHRASES = {
+    "uni": "uni", "casual": "a casual day", "night_out": "a night out", "date": "a date", "interview": "an interview",
+    "work": "work", "wedding": "a wedding", "funeral": "a funeral", "sport": "sport", "other": "this plan",
+}
 
 # ---- weather
 WET_RAIN_PROBABILITY = 50  # %
@@ -36,7 +41,8 @@ OUTERWEAR_NEEDED_BELOW_C = 15
 SLOTS = ["top", "bottom", "one_piece", "outerwear", "shoes", "accessory"]
 SPORTSWEAR_BOTTOM_WORDS = ("short", "legging", "jogger", "track pant", "tracksuit bottom", "tights", "skort")
 MAX_ACCESSORIES = 3
-SECOND_HAND_TIP = "borrow one from a friend, or look on Vinted, Depop or in a charity shop"
+SECOND_HAND_TIP = "borrow from a friend, or look on Vinted, Depop or in a charity shop"
+BUSY_STATUS_TEXT = {"in_wash": "in the wash", "worn": "waiting for the wash", "unavailable": "marked unavailable"}
 
 
 def is_wet(rain_probability: Optional[float], precipitation_mm: Optional[float]) -> bool:
@@ -78,7 +84,8 @@ def filter_candidates(items: list[Item], parsed: dict[str, Any], weather: Option
     def formality_ok(item: Item) -> bool:
         if item.formality is None:
             return occasion in NULL_FORMALITY_OK
-        return low <= item.formality <= high
+        slack = OUTERWEAR_FORMALITY_SLACK if slot_for(item) == "outerwear" else 0
+        return low - slack <= item.formality <= high + slack
 
     slots: dict[str, list[Item]] = {s: [] for s in SLOTS}
     for item in usable:
@@ -96,6 +103,7 @@ def filter_candidates(items: list[Item], parsed: dict[str, Any], weather: Option
         "outerwear_required": False,
         "outerwear_must_be_waterproof": False,
         "avoid": [],
+        "prefer_warmth": None,  # "cooler" | "warmer": a tie-breaker for ranking
     }
     temp = weather.get("temperature_c") if weather else None
     wet = bool(weather and weather.get("is_wet"))
@@ -103,6 +111,8 @@ def filter_candidates(items: list[Item], parsed: dict[str, Any], weather: Option
 
     if temp is not None and temp < OUTERWEAR_NEEDED_BELOW_C:
         requirements["outerwear_required"] = True
+    if temp is not None and (temp < COLD_C or temp > HOT_C):
+        requirements["prefer_warmth"] = "warmer" if temp < COLD_C else "cooler"
 
     if wet and exposed:
         requirements["outerwear_required"] = True
@@ -133,28 +143,30 @@ def filter_candidates(items: list[Item], parsed: dict[str, Any], weather: Option
             slots[slot] = [i for i in slots[slot] if (i.warmth or 0) <= HOT_MAX_WARMTH]
         requirements["outerwear_required"] = False
 
-    gaps += _slot_gaps(slots, requirements, occasion, items)
+    gaps += _slot_gaps(slots, requirements, occasion, items, formality_ok)
     return FilterResult(candidates=slots, requirements=requirements, gaps=gaps)
 
 
-def _slot_gaps(slots: dict[str, list[Item]], requirements: dict[str, Any], occasion: str, wardrobe: list[Item]) -> list[str]:
-    label = occasion.replace("_", " ")
+def _slot_gaps(slots: dict[str, list[Item]], requirements: dict[str, Any], occasion: str, wardrobe: list[Item],
+               formality_ok: Callable[[Item], bool]) -> list[str]:
+    label = OCCASION_PHRASES.get(occasion, "this plan")
     gaps: list[str] = []
 
     def unavailable_hint(slot: str) -> str:
+        """Point out a suitable item that's only missing because it's in the wash / lent out."""
         busy = [i for i in wardrobe if i.confirmed and i.owner == "me" and slot_for(i) == slot
-                and i.status in ("in_wash", "worn", "unavailable")]
+                and i.status in BUSY_STATUS_TEXT and formality_ok(i)]
         if busy:
-            return f" (your {busy[0].name.lower()} is {busy[0].status.replace('_', ' ')})"
+            return f" (your {busy[0].name.lower()} {'are' if busy[0].name.lower().endswith('s') else 'is'} {BUSY_STATUS_TEXT[busy[0].status]})"
         return ""
 
     if not slots["shoes"]:
-        gaps.append(f"No shoes that suit a {label}{unavailable_hint('shoes')}: {SECOND_HAND_TIP}.")
+        gaps.append(f"No shoes that suit {label}{unavailable_hint('shoes')}: {SECOND_HAND_TIP}.")
     has_separates = bool(slots["top"]) and bool(slots["bottom"])
     if not has_separates and not slots["one_piece"]:
         missing = "top" if not slots["top"] else "bottom"
-        gaps.append(f"No {missing} that suits a {label}{unavailable_hint(missing)}: {SECOND_HAND_TIP}.")
+        gaps.append(f"No {missing} that suits {label}{unavailable_hint(missing)}: {SECOND_HAND_TIP}.")
     if requirements["outerwear_required"] and not slots["outerwear"] and not requirements["outerwear_must_be_waterproof"]:
         if not any("waterproof coat" in g for g in gaps):
-            gaps.append(f"You'll want a coat but none suit a {label}{unavailable_hint('outerwear')}.")
+            gaps.append(f"You'll want a coat, but none suit {label}{unavailable_hint('outerwear')}.")
     return gaps

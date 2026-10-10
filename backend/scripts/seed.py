@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlmodel import Session, select  # noqa: E402
+from sqlmodel import Session, SQLModel, select  # noqa: E402
 
 from app.config import DB_PATH, UPLOAD_DIR  # noqa: E402
 from app.db import engine, init_db  # noqa: E402
@@ -43,7 +43,10 @@ SEED_ITEMS = [
 
 
 def wipe() -> None:
-    DB_PATH.unlink(missing_ok=True)
+    """Drop and recreate all tables (not the file, so a running API keeps working) and clear images."""
+    from app import models  # noqa: F401  (register tables)
+
+    SQLModel.metadata.drop_all(engine)
     for sub in ("originals", "thumbs", "placeholders"):
         shutil.rmtree(UPLOAD_DIR / sub, ignore_errors=True)
 

@@ -11,6 +11,7 @@ from app.config import settings
 from app.db import get_session
 from app.errors import api_error
 from app.models import AICall, IngestLog
+from app.services import weather
 from app.services.limits import get_user
 
 router = APIRouter(prefix="/api/debug", tags=["debug"])
@@ -69,3 +70,21 @@ def reset_premium(session: Session = Depends(get_session)) -> dict[str, bool]:
     session.add(user)
     session.commit()
     return {"premium": False}
+
+
+class WeatherOverride(BaseModel):
+    preset: Optional[str] = None  # "rain" | "cold" | "hot"; None = real forecast
+
+
+@router.get("/weather-override")
+def get_weather_override() -> dict[str, Any]:
+    active = next((k for k, v in weather.DEMO_WEATHER.items() if v is weather.OVERRIDE), None)
+    return {"preset": active, "presets": list(weather.DEMO_WEATHER)}
+
+
+@router.post("/weather-override")
+def set_weather_override(body: WeatherOverride) -> dict[str, Any]:
+    if body.preset and body.preset not in weather.DEMO_WEATHER:
+        raise api_error(422, "unknown_preset", f"Use one of: {', '.join(weather.DEMO_WEATHER)}.")
+    weather.OVERRIDE = weather.DEMO_WEATHER[body.preset] if body.preset else None
+    return {"preset": body.preset}

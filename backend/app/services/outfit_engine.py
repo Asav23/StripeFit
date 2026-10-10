@@ -75,14 +75,17 @@ def candidate_dicts(candidates: dict[str, list[Item]]) -> list[dict[str, Any]]:
 
 
 def _rank(options: list[dict[str, Any]], requirements: dict[str, Any]) -> list[dict[str, Any]]:
-    """Formality closest to the occasion midpoint first, then least recently worn."""
+    """Formality closest to the occasion midpoint first, then suits the temperature, then least recently worn."""
     low, high = requirements["formality_range"]
     midpoint = (low + high) / 2
+    prefer = requirements.get("prefer_warmth")
 
-    def key(c: dict[str, Any]) -> tuple[float, int]:
+    def key(c: dict[str, Any]) -> tuple[float, int, int]:
         distance = abs(c["formality"] - midpoint) if c["formality"] is not None else UNKNOWN_FORMALITY_DISTANCE
+        warmth = c["warmth"] if c["warmth"] is not None else 3
+        warmth_penalty = warmth if prefer == "cooler" else -warmth if prefer == "warmer" else 0
         days = c["days_since_worn"] if c["days_since_worn"] is not None else NEVER_WORN_DAYS
-        return distance, -days
+        return distance, warmth_penalty, -days
 
     return sorted(options, key=key)
 

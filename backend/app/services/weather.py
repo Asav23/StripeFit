@@ -40,6 +40,15 @@ WEATHER_CODES: dict[int, tuple[str, str]] = {
 
 _cache: dict[str, tuple[float, Any]] = {}
 
+# Demo switch (POST /api/debug/weather-override): pretend it's raining/hot so judges can see the
+# weather rules on any day. None = real forecast.
+OVERRIDE: dict[str, Any] | None = None
+DEMO_WEATHER = {
+    "rain": {"temperature_c": 9.0, "precipitation_probability": 85, "precipitation_mm": 1.8, "wind_kmh": 32.0, "weather_code": 63},
+    "cold": {"temperature_c": 2.0, "precipitation_probability": 10, "precipitation_mm": 0.0, "wind_kmh": 12.0, "weather_code": 3},
+    "hot": {"temperature_c": 25.0, "precipitation_probability": 0, "precipitation_mm": 0.0, "wind_kmh": 8.0, "weather_code": 0},
+}
+
 
 def _get_json(url: str, params: dict[str, Any]) -> Any:
     key = url + repr(sorted(params.items()))
@@ -82,9 +91,12 @@ def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | 
     place = geocode(destination) if destination else None
     if place is None:
         if destination:
-            notices.append(f"Couldn't find “{destination}”, so we used {settings.DEFAULT_LOCATION_NAME} weather.")
+            notices.append(f"Using {settings.DEFAULT_LOCATION_NAME} weather for “{destination}”.")
         place = (settings.DEFAULT_LOCATION_NAME, settings.DEFAULT_LAT, settings.DEFAULT_LON)
     label, lat, lon = place
+
+    if OVERRIDE is not None:
+        return _weather_from(OVERRIDE, label, when), notices + ["Demo weather is on (set on the AI log page)."]
 
     try:
         data = _get_json(FORECAST_URL, {
@@ -123,3 +135,19 @@ def forecast_for(destination: str | None, when: datetime) -> tuple[WeatherOut | 
         is_wet=is_wet(rain_prob, rain_mm),
     )
     return weather, notices
+
+
+def _weather_from(values: dict[str, Any], label: str, when: datetime) -> WeatherOut:
+    description, icon = WEATHER_CODES.get(values["weather_code"], ("Unknown conditions", "🌡️"))
+    return WeatherOut(
+        location_name=label,
+        time=when.isoformat(),
+        temperature_c=values["temperature_c"],
+        precipitation_probability=values["precipitation_probability"],
+        precipitation_mm=values["precipitation_mm"],
+        wind_kmh=values["wind_kmh"],
+        weather_code=values["weather_code"],
+        description=description,
+        icon=icon,
+        is_wet=is_wet(values["precipitation_probability"], values["precipitation_mm"]),
+    )
