@@ -1,0 +1,24 @@
+# Secrets
+.env
+backend/.env
+backend/.gmail_token.json
+.gmail_token.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.db-journal
+
+# Uploaded images
+backend/uploads/
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

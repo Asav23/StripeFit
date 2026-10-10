@@ -1,0 +1,3 @@
+{"name": "Coffee mug", "category": "unknown", "colours": ["white"], "formality": null, "warmth": null,
+ "waterproof": null, "material": null, "is_clothing": false, "confidence": 0.95,
+ "notes": "This looks like a coffee mug, not clothing."}

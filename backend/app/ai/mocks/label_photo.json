@@ -1,0 +1,16 @@
+[
+  {"name": "Navy cotton crew-neck jumper", "category": "top", "colours": ["navy"], "formality": 3, "warmth": 3,
+   "waterproof": false, "material": "cotton knit", "is_clothing": true, "confidence": 0.86, "notes": null},
+  {"name": "Light blue slim jeans", "category": "bottom", "colours": ["light blue"], "formality": 2, "warmth": 2,
+   "waterproof": false, "material": "denim", "is_clothing": true, "confidence": 0.91, "notes": null},
+  {"name": "Black denim jacket", "category": "outerwear", "colours": ["black"], "formality": 2, "warmth": 2,
+   "waterproof": false, "material": "denim", "is_clothing": true, "confidence": 0.78,
+   "notes": "Photo shows a person wearing an outfit; labelled the jacket as the most prominent item."},
+  {"name": "Striped long-sleeve top", "category": "top", "colours": ["white", "navy"], "formality": 2, "warmth": 2,
+   "waterproof": null, "material": "unknown", "is_clothing": true, "confidence": 0.55, "notes": "Fabric not clear from the photo."},
+  {"name": "Tan leather loafers", "category": "shoes", "colours": ["tan"], "formality": 4, "warmth": null,
+   "waterproof": false, "material": "leather", "is_clothing": true, "confidence": 0.83, "notes": null},
+  {"name": "Knitted beanie", "category": "accessory", "colours": ["unknown"], "formality": 1, "warmth": 4,
+   "waterproof": null, "material": null, "is_clothing": true, "confidence": 0.42,
+   "notes": "Colour is hard to tell in this lighting."}
+]

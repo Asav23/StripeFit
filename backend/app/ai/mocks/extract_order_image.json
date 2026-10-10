@@ -1,0 +1,9 @@
+{"email_type": "order_confirmation", "retailer": "Zara", "order_id": "ZR-55102938", "currency": "EUR",
+ "order_date": "2026-10-02",
+ "items": [
+   {"name": "Textured knit polo shirt", "category": "top", "colours": ["ecru"], "size": "M", "quantity": 1,
+    "price": 29.95, "is_clothing": true, "likely_for": "me", "image_url": null, "status_hint": "kept", "exchange_role": null},
+   {"name": "Straight fit trousers", "category": "bottom", "colours": ["black"], "size": "42", "quantity": 1,
+    "price": 35.95, "is_clothing": true, "likely_for": "me", "image_url": null, "status_hint": "kept", "exchange_role": null}
+ ],
+ "confidence": 0.74}
