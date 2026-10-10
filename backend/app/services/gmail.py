@@ -29,7 +29,8 @@ log = logging.getLogger("stripefit.gmail")
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 MAX_MESSAGES = 100
-SUBJECT_TERMS = "order OR confirmation OR receipt OR shipped OR dispatched OR delivered OR refund OR return"
+SUBJECT_TERMS = ("order OR confirmation OR receipt OR shipped OR dispatched OR delivered OR refund OR return"
+                 " OR exchange OR Bestellung OR Versand OR commande OR pedido")  # a few non-English shops too
 
 os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")  # Google may echo scopes in a different order
 
