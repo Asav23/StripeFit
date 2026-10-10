@@ -100,7 +100,7 @@ export default function ItemDrawer({
           <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => replacePhoto(e.target.files?.[0])} />
         </div>
         <div className="min-w-0 pt-1">
-          <h2 className="display text-[30px]">{item.name}</h2>
+          <h2 className="display text-[22px]">{item.name}</h2>
           <p className="mt-2 text-[13px] text-muted">{meta}</p>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function ItemDrawer({
 
       <ItemEditor draft={draft} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
 
-      <div className="sticky bottom-0 -mx-5 mt-8 flex gap-2 border-t border-line bg-paper px-5 pt-4">
+      <div className="sticky bottom-0 -mx-5 mt-8 flex gap-2 border-t border-line bg-card px-5 pt-4">
         {confirmDelete ? (
           <>
             <p className="flex-1 self-center text-sm text-ink-2">Delete this item for good?</p>

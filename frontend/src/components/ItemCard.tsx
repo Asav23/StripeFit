@@ -23,8 +23,8 @@ export default function ItemCard({
       className="group block w-full text-left"
     >
       <div
-        className={`relative aspect-[4/5] overflow-hidden rounded-md bg-sunk transition ${
-          selected ? "ring-2 ring-ink ring-offset-2 ring-offset-paper" : ""
+        className={`relative aspect-[4/5] overflow-hidden rounded-lg bg-sunk shadow-[inset_0_0_0_1px_rgb(10_37_64/0.04)] transition duration-200 group-hover:shadow-[var(--shadow-card)] ${
+          selected ? "ring-2 ring-accent ring-offset-2 ring-offset-paper" : ""
         }`}
       >
         {item.thumb_url && (
@@ -44,7 +44,7 @@ export default function ItemCard({
         {selectable && (
           <span
             className={`absolute bottom-2 right-2 grid h-6 w-6 place-items-center rounded-full border transition ${
-              selected ? "border-ink bg-ink text-paper" : "border-ink/30 bg-card/90 text-transparent"
+              selected ? "border-accent bg-accent text-white" : "border-ink/25 bg-card/90 text-transparent"
             }`}
           >
             <Check className="h-3.5 w-3.5" strokeWidth={3} />

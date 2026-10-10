@@ -118,7 +118,7 @@ function ReviewCard({ item, index, onDone }: { item: ReviewItem; index: number; 
 
       <div className="min-w-0 space-y-5">
         {askOwner && (
-          <div className="rounded-md border border-line bg-card p-4">
+          <div className="rounded-lg border border-line bg-card p-4 shadow-[var(--shadow-card)]">
             <p className="mb-3 flex items-center gap-2 text-sm font-medium">
               <UserRound className="h-4 w-4 text-accent" /> {item.prompt}
             </p>

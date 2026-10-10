@@ -17,7 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
 export default function IngestResults({ summary }: { summary: IngestSummary }) {
   const skipped = Object.values(summary.skipped).reduce((a, b) => a + b, 0);
   return (
-    <section className="animate-rise overflow-hidden rounded-lg border border-line bg-card">
+    <section className="animate-rise overflow-hidden rounded-xl border border-line bg-card shadow-[var(--shadow-card)]">
       <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
         {[
           ["New", summary.items_created],
@@ -25,7 +25,7 @@ export default function IngestResults({ summary }: { summary: IngestSummary }) {
           ["Skipped", skipped],
         ].map(([label, n]) => (
           <div key={label} className="px-4 py-3">
-            <p className="display text-[34px] leading-none">{n}</p>
+            <p className="display font-mono text-[26px] leading-none">{n}</p>
             <p className="kicker mt-1">{label}</p>
           </div>
         ))}
@@ -49,7 +49,7 @@ export default function IngestResults({ summary }: { summary: IngestSummary }) {
         ))}
       </ul>
       {summary.items_created > 0 && (
-        <div className="border-t border-line bg-paper px-4 py-3">
+        <div className="border-t border-line bg-[#fafbfd] px-4 py-3">
           <LinkButton to="/review">
             Review {summary.items_created} new item{summary.items_created > 1 ? "s" : ""} <ArrowRight className="h-4 w-4" />
           </LinkButton>

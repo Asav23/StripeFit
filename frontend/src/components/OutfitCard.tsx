@@ -62,7 +62,7 @@ export function WeatherBlock({ weather }: { weather: Weather }) {
     <div className="flex items-center gap-4">
       <Icon className="h-9 w-9 text-ink-2" strokeWidth={1.25} />
       <div>
-        <p className="display text-[40px] leading-none">{Math.round(weather.temperature_c)}°</p>
+        <p className="display text-[32px] leading-none">{Math.round(weather.temperature_c)}°</p>
         <p className="mt-1 text-xs text-muted">{weather.description}</p>
       </div>
       <dl className="space-y-1 border-l border-line pl-4 font-mono text-[11px] text-ink-2">
@@ -103,19 +103,19 @@ export default function OutfitCard({ outfit, onChange }: { outfit: Outfit; onCha
   const TravelIcon = travel.icon;
 
   return (
-    <article className="animate-rise overflow-hidden rounded-lg border border-line bg-card">
+    <article className="animate-rise overflow-hidden rounded-xl border border-line bg-card shadow-[var(--shadow-card)]">
       {/* Headline: the occasion, when/where, and the weather that shaped the pick */}
-      <header className="flex flex-col gap-5 border-b border-line p-5 md:flex-row md:items-end md:justify-between md:p-7">
+      <header className="flex flex-col gap-5 border-b border-line bg-[linear-gradient(180deg,rgb(238_237_254/0.55),rgb(255_255_255/0))] p-5 md:flex-row md:items-end md:justify-between md:p-7">
         <div className="min-w-0">
-          <p className="kicker mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="eyebrow mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>The look</span>
             {outfit.used_fallback && (
-              <span className="tag border-warn/40 text-warn" title="The AI's answer wasn't usable, so StripeFit's rules picked this outfit">
+              <span className="tag bg-warn-soft text-warn" title="The AI's answer wasn't usable, so StripeFit's rules picked this outfit">
                 Rule-based pick
               </span>
             )}
           </p>
-          <h2 className="display text-[44px] md:text-[56px]">{OCCASION_LABELS[p.occasion] ?? p.occasion}</h2>
+          <h2 className="display text-[30px] md:text-[36px]">{OCCASION_LABELS[p.occasion] ?? p.occasion}</h2>
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
             <span>{when(p.datetime_iso)}</span>
             {p.destination && <span>· {p.destination}</span>}
@@ -133,7 +133,7 @@ export default function OutfitCard({ outfit, onChange }: { outfit: Outfit; onCha
       </header>
 
       <div className="space-y-5 p-5 md:p-7">
-        <blockquote className="border-l-2 border-accent pl-4 text-[17px] leading-relaxed text-ink">{outfit.explanation}</blockquote>
+        <blockquote className="border-l-2 border-accent pl-4 text-[16.5px] leading-relaxed text-ink">{outfit.explanation}</blockquote>
 
         {outfit.notices.length > 0 && (
           <ul className="space-y-1">
@@ -180,7 +180,7 @@ export default function OutfitCard({ outfit, onChange }: { outfit: Outfit; onCha
         )}
       </div>
 
-      <footer className="flex items-center gap-2 border-t border-line bg-paper px-5 py-3.5 md:px-7">
+      <footer className="flex items-center gap-2 border-t border-line bg-[#fafbfd] px-5 py-3.5 md:px-7">
         <Button
           onClick={() => act("wear", () => api.wear(outfit.id), "Have a good one. Those items are now marked as worn.")}
           loading={busy === "wear"}
@@ -200,7 +200,7 @@ export default function OutfitCard({ outfit, onChange }: { outfit: Outfit; onCha
                 aria-pressed={active}
                 aria-label={f === "up" ? "Good outfit" : "Not for me"}
                 className={`grid h-10 w-10 place-items-center rounded-md border transition ${
-                  active ? "border-ink bg-ink text-paper" : "border-line-strong text-ink-2 hover:border-ink"
+                  active ? "border-accent bg-accent-soft text-accent" : "border-line-strong bg-card text-ink-2 shadow-[var(--shadow-xs)] hover:border-[#b5c0cc] hover:text-ink"
                 }`}
               >
                 <Icon className="h-4 w-4" strokeWidth={1.75} />

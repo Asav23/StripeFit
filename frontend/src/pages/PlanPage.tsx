@@ -85,7 +85,7 @@ export default function PlanPage() {
           e.preventDefault();
           void plan();
         }}
-        className="rounded-lg border border-line-strong bg-card transition focus-within:border-ink focus-within:shadow-[0_0_0_3px_rgb(29_27_24/0.06)]"
+        className="rounded-xl border border-line-strong bg-card shadow-[var(--shadow-card)] transition focus-within:border-accent focus-within:shadow-[0_0_0_4px_rgb(91_80_240/0.12),var(--shadow-card)]"
       >
         <label htmlFor="plan-input" className="sr-only">
           Where are you going, when, and how are you getting there?
@@ -130,7 +130,7 @@ export default function PlanPage() {
             type="button"
             onClick={() => void plan(ex)}
             disabled={loading}
-            className="rounded-sm px-1.5 py-0.5 text-[13px] text-ink-2 underline decoration-line-strong underline-offset-4 transition hover:bg-sunk hover:text-ink hover:decoration-ink disabled:opacity-50"
+            className="rounded-sm px-1.5 py-0.5 text-[13px] text-ink-2 underline decoration-line-strong underline-offset-4 transition hover:bg-accent-soft hover:text-accent hover:decoration-accent disabled:opacity-50"
           >
             {ex}
           </button>
@@ -155,7 +155,7 @@ export default function PlanPage() {
         )}
 
         {loading && (
-          <div className="overflow-hidden rounded-lg border border-line bg-card" aria-busy="true">
+          <div className="overflow-hidden rounded-xl border border-line bg-card shadow-[var(--shadow-card)]" aria-busy="true">
             <div className="flex items-end justify-between border-b border-line p-5 md:p-7">
               <div className="space-y-3">
                 <Skeleton className="h-3 w-16" />

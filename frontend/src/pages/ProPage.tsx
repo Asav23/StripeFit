@@ -21,7 +21,7 @@ export function PurchaseRecord({ purchase }: { purchase: Purchase }) {
     ["Session", purchase.stripe_session_id],
   ];
   return (
-    <dl className="divide-y divide-dashed divide-line-strong rounded-lg border border-line bg-card px-4 font-mono text-[12.5px]">
+    <dl className="divide-y divide-dashed divide-line-strong rounded-xl border border-line bg-card px-4 font-mono shadow-[var(--shadow-card)] text-[12.5px]">
       {rows.map(([k, v]) => (
         <div key={k} className="flex items-baseline justify-between gap-6 py-2.5">
           <dt className="uppercase tracking-wide text-muted">{k}</dt>
@@ -37,19 +37,20 @@ export function PurchaseRecord({ purchase }: { purchase: Purchase }) {
 /** The price, drawn as a garment swing tag. */
 function SwingTag({ premium }: { premium: boolean }) {
   return (
-    <div className="relative mx-auto w-full max-w-[260px] rotate-[-2deg] rounded-md border border-line-strong bg-card px-6 pb-7 pt-10 text-center shadow-[0_18px_40px_-20px_rgb(0_0_0/0.35)] transition hover:rotate-0">
-      <span className="absolute left-1/2 top-4 h-3 w-3 -translate-x-1/2 rounded-full border border-line-strong bg-paper" />
+    <div className="relative mx-auto w-full max-w-[260px] rotate-[-2deg] overflow-hidden rounded-xl border border-line bg-card px-6 pb-7 pt-10 text-center shadow-[var(--shadow-overlay)] transition duration-300 hover:rotate-0">
+      <span className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#5b50f0,#8a7dff_45%,#2bb5d8)]" />
+      <span className="absolute left-1/2 top-4 h-3 w-3 -translate-x-1/2 rounded-full border border-line-strong bg-paper shadow-[inset_0_1px_2px_rgb(10_37_64/0.12)]" />
       <p className="kicker">StripeFit</p>
-      <p className="display mt-1 text-[30px]">Pro</p>
-      <div className="my-4 border-t border-dashed border-line-strong" />
+      <p className="display mt-0.5 text-[24px]">Pro</p>
+      <div className="my-5 border-t border-dashed border-line-strong" />
       {premium ? (
-        <p className="display text-[44px] leading-none text-ok">Yours</p>
+        <p className="display text-[36px] leading-none text-ok">Yours</p>
       ) : (
-        <p className="display text-[64px] leading-none">
-          <span className="align-top text-[30px]">€</span>2.99
+        <p className="display text-[56px] leading-none tracking-[-0.04em]">
+          <span className="mr-0.5 align-top text-[26px] font-medium text-ink-2">€</span>2.99
         </p>
       )}
-      <p className="mt-2 font-mono text-[11px] uppercase tracking-wide text-muted">{premium ? "Active" : "One-time · no subscription"}</p>
+      <p className="mt-3 text-[12px] font-medium text-muted">{premium ? "Active" : "One-time · no subscription"}</p>
     </div>
   );
 }
