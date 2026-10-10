@@ -2,7 +2,7 @@
 
 Levels (strongest first):
   definite: exact source_ref match (same retailer|order|item|size) beyond the ordered quantity
-  likely:   same category + overlapping colour + near-identical photo (perceptual hash)
+  likely:   the same photo again, or same category + overlapping colour + a very similar photo
   possible: same category + same retailer + similar name
 Units of the same order line (e.g. 2 identical T-shirts) are never duplicates of each other.
 """
@@ -17,7 +17,8 @@ from sqlmodel import Session, select
 from app.models import Item
 from app.services import images
 
-HASH_DISTANCE_THRESHOLD = 8  # of 64 bits; same photo re-uploaded is ~0-4
+HASH_DISTANCE_THRESHOLD = 8  # of 64 bits: similar photo of the same category and colour
+SAME_PHOTO_DISTANCE = 4  # near-identical image: a re-upload of the same photo
 NAME_SIMILARITY_THRESHOLD = 0.6
 LEVEL_RANK = {"definite": 0, "likely": 1, "possible": 2}
 MERGEABLE_FIELDS = ("category", "colours", "formality", "warmth", "waterproof", "material", "retailer", "size",
@@ -58,9 +59,12 @@ def find_duplicate(session: Session, item: Item) -> Optional[Duplicate]:
         others = [o for o in others if o.source_ref != item.source_ref]  # sibling units aren't duplicates
 
     for other in others:
+        distance = images.hash_distance(item.image_hash, other.image_hash)
+        if distance is not None and distance <= SAME_PHOTO_DISTANCE:  # the same photo, whatever the labels say
+            found.append((1, distance, Duplicate(other, "likely", "This looks like the same photo.")))
+            continue
         if other.category != item.category or not _colours_overlap(item.colours, other.colours):
             continue
-        distance = images.hash_distance(item.image_hash, other.image_hash)
         if distance is not None and distance <= HASH_DISTANCE_THRESHOLD:
             found.append((1, distance, Duplicate(other, "likely", "Very similar photo, same category and colour.")))
         elif (item.retailer and other.retailer and normalise_name(item.retailer) == normalise_name(other.retailer)
